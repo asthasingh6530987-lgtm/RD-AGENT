@@ -1,0 +1,5 @@
+{
+	"appId": "com.postagent.app",
+	"appName": "PostAgent",
+	"webDir": "dist"
+}

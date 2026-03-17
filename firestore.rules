@@ -1,0 +1,175 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - User ID
+    //   - email: string (required) - User email address
+    //   - name: string (optional) - User display name
+    //   - role: string (optional) - User role, e.g., 'agent'
+    //   - status: string (required) - User status, 'pending', 'approved', 'rejected'
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: uploads
+    // Document ID: {uploadId}
+    // Fields:
+    //   - agentId: string (required) - ID of the agent who uploaded
+    //   - filename: string (required) - Name of the uploaded file
+    //   - totalAmount: number (required) - Total amount in the file
+    //   - totalAccounts: number (required) - Total number of accounts
+    //   - status: string (required) - Status of the upload, e.g., 'processed'
+    //   - createdAt: timestamp (required)
+    //
+    // Collection: batches
+    // Document ID: {batchId}
+    // Fields:
+    //   - agentId: string (required) - ID of the agent who owns this batch
+    //   - uploadId: string (required) - ID of the upload this batch belongs to
+    //   - totalAmount: number (required) - Total amount in this batch (<= 20000)
+    //   - accountCount: number (required) - Number of accounts in this batch
+    //   - status: string (required) - Status, e.g., 'pending', 'processing', 'completed', 'failed'
+    //   - accounts: list (required) - List of { accountNo: string, amount: number }
+    //   - createdAt: timestamp (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.uid;
+    }
+
+    function uidUnchanged() {
+      return !('uid' in request.resource.data) ||
+        request.resource.data.uid == request.auth.uid;
+    }
+
+    function uidNotModified() {
+      return !('uid' in request.resource.data) ||
+        request.resource.data.uid == resource.data.uid;
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidEmail(email) {
+      return email is string &&
+        email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isPositive(field) {
+      return request.resource.data[field] is number && request.resource.data[field] > 0;
+    }
+
+    function isValidList(list, maxSize) {
+      return list is list && list.size() <= maxSize;
+    }
+
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+             (request.resource.data[field] is string &&
+              request.resource.data[field].size() >= minLen &&
+              request.resource.data[field].size() <= maxLen);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "asthasingh6530987@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['uid', 'email', 'name', 'role', 'status', 'createdAt']) &&
+             data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
+             data.email is string && isValidEmail(data.email) &&
+             isValidOptionalString('name', 0, 100) &&
+             isValidOptionalString('role', 0, 50) &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidUpload(data) {
+      return hasOnlyAllowedFields(['agentId', 'filename', 'totalAmount', 'totalAccounts', 'status', 'createdAt']) &&
+             data.agentId is string && data.agentId.size() > 0 && data.agentId.size() < 100 &&
+             data.filename is string && data.filename.size() > 0 && data.filename.size() < 255 &&
+             data.totalAmount is number && data.totalAmount >= 0 &&
+             data.totalAccounts is number && data.totalAccounts >= 0 &&
+             data.status in ['processed', 'failed', 'pending'] &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidBatch(data) {
+      return hasOnlyAllowedFields(['agentId', 'uploadId', 'totalAmount', 'accountCount', 'status', 'accounts', 'createdAt', 'referenceNumber', 'batchNumber']) &&
+             data.agentId is string && data.agentId.size() > 0 && data.agentId.size() < 100 &&
+             data.uploadId is string && data.uploadId.size() > 0 && data.uploadId.size() < 100 &&
+             data.totalAmount is number && data.totalAmount > 0 && data.totalAmount <= 20000 &&
+             data.accountCount is number && data.accountCount > 0 &&
+             data.status in ['pending', 'processing', 'completed', 'failed'] &&
+             isValidOptionalString('referenceNumber', 0, 100) &&
+             ( !('batchNumber' in data) || data.batchNumber is number ) &&
+             isValidList(data.accounts, 200) && // Max 200 accounts per batch (min 100 each)
+             data.createdAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if (isOwner(userId) && isValidUser(request.resource.data) && uidUnchanged() && request.resource.data.role == 'agent' && request.resource.data.status == 'pending') || isAdmin();
+      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && uidNotModified() && areImmutableFieldsUnchanged(['createdAt', 'role', 'status'])) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /uploads/{uploadId} {
+      allow read: if (isAuthenticated() && resource.data.agentId == request.auth.uid) || isAdmin();
+      allow create: if (isAuthenticated() && isValidUpload(request.resource.data) && request.resource.data.agentId == request.auth.uid) || isAdmin();
+      allow update: if (isAuthenticated() && isValidUpload(request.resource.data) && resource.data.agentId == request.auth.uid && areImmutableFieldsUnchanged(['agentId', 'createdAt'])) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /batches/{batchId} {
+      allow read: if (isAuthenticated() && resource.data.agentId == request.auth.uid) || isAdmin();
+      allow create: if (isAuthenticated() && isValidBatch(request.resource.data) && request.resource.data.agentId == request.auth.uid) || isAdmin();
+      allow update: if (isAuthenticated() && isValidBatch(request.resource.data) && resource.data.agentId == request.auth.uid && areImmutableFieldsUnchanged(['agentId', 'uploadId', 'createdAt', 'accounts', 'totalAmount', 'accountCount', 'batchNumber'])) || isAdmin();
+      allow delete: if (isAuthenticated() && resource.data.agentId == request.auth.uid) || isAdmin();
+    }
+  }
+}
