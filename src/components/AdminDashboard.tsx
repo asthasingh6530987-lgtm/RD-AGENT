@@ -419,7 +419,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
                     </div>
                     <button
                       onClick={() => setDeleteTarget({ id: u.id, type: 'user', name: u.name || u.email })}
-                      className="p-2 text-slate-300 hover:text-brand hover:bg-brand/5 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                      className="p-2 text-slate-300 hover:text-brand hover:bg-brand/5 rounded-xl transition-all"
                     >
                       <Trash2 className="w-5 h-5" />
                     </button>

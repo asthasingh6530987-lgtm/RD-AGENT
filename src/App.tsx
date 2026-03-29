@@ -5,9 +5,10 @@ import { auth, db, loginWithGoogle, logout } from './firebase';
 import Dashboard from './components/Dashboard';
 import Converter from './components/Converter';
 import AdminDashboard from './components/AdminDashboard';
+import CollectionTracker from './components/CollectionTracker';
 import ErrorBoundary from './components/ErrorBoundary';
 import ConfirmationModal from './components/ConfirmationModal';
-import { LogIn, Loader2, LayoutDashboard, FileType, Building2, ShieldCheck, Zap, LogOut, ShieldAlert, X, CheckCircle2, AlertCircle, Info } from 'lucide-react';
+import { LogIn, Loader2, LayoutDashboard, FileType, Building2, ShieldCheck, Zap, LogOut, ShieldAlert, X, CheckCircle2, AlertCircle, Info, Wallet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Toast {
@@ -20,7 +21,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<'agent' | 'admin' | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'converter' | 'admin'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'converter' | 'admin' | 'collections'>('dashboard');
   const [loginMode, setLoginMode] = useState<'agent' | 'admin'>('agent');
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -395,6 +396,17 @@ export default function App() {
               Dashboard
             </button>
             <button
+              onClick={() => setCurrentView('collections')}
+              className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 ${
+                currentView === 'collections' 
+                  ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/20' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              <Wallet className="w-4 h-4" />
+              Collections
+            </button>
+            <button
               onClick={() => setCurrentView('converter')}
               className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 flex items-center gap-2.5 ${
                 currentView === 'converter' 
@@ -421,6 +433,16 @@ export default function App() {
           <span className="text-[9px] font-black uppercase tracking-[0.2em]">Home</span>
         </button>
         
+        <button
+          onClick={() => setCurrentView('collections')}
+          className={`flex flex-col items-center gap-1.5 transition-all duration-300 ${
+            currentView === 'collections' ? 'text-brand scale-110' : 'text-slate-300'
+          }`}
+        >
+          <Wallet className="w-6 h-6" />
+          <span className="text-[9px] font-black uppercase tracking-[0.2em]">Collect</span>
+        </button>
+
         <button
           onClick={() => setCurrentView('converter')}
           className={`flex flex-col items-center gap-1.5 transition-all duration-300 ${
@@ -463,6 +485,8 @@ export default function App() {
             <AdminDashboard user={user} addToast={addToast} />
           ) : currentView === 'dashboard' ? (
             <Dashboard user={user} addToast={addToast} />
+          ) : currentView === 'collections' ? (
+            <CollectionTracker user={user} addToast={addToast} />
           ) : (
             <Converter />
           )}
