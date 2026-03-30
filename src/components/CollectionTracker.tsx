@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { collection, query, where, getDocs, addDoc, deleteDoc, doc, serverTimestamp, orderBy, writeBatch } from 'firebase/firestore';
 import { db } from '../firebase';
 import { User } from 'firebase/auth';
-import { Calendar, CheckCircle2, Circle, IndianRupee, Loader2, Plus, Search, User as UserIcon, Trash2, X, Upload, Star, FileDown, RotateCcw } from 'lucide-react';
+import { Calendar, CheckCircle2, Circle, IndianRupee, Loader2, Plus, Search, User as UserIcon, Trash2, X, Upload, Star, FileDown, RotateCcw, Save } from 'lucide-react';
 import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -55,6 +55,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
 
   // Loading states for individual checkboxes
   const [processingAccounts, setProcessingAccounts] = useState<Set<string>>(new Set());
+  const [pendingCollections, setPendingCollections] = useState<CollectionRecord[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -149,6 +150,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
     setProcessingAccounts(prev => new Set(prev).add(customer.accountNo));
 
     const existingCollection = collections.find(c => c.accountNo === customer.accountNo);
+    const pendingCollection = pendingCollections.find(c => c.accountNo === customer.accountNo);
 
     try {
       if (existingCollection) {
@@ -156,28 +158,20 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
         await deleteDoc(doc(db, 'collections', existingCollection.id));
         setCollections(collections.filter(c => c.id !== existingCollection.id));
         setMonthlyCollections(monthlyCollections.filter(c => c.id !== existingCollection.id));
+      } else if (pendingCollection) {
+        // Un-tick: Remove from pending
+        setPendingCollections(pendingCollections.filter(c => c.accountNo !== customer.accountNo));
       } else {
-        // Tick: Add collection
+        // Tick: Add to pending
         const totalAmount = customer.defaultAmount * months;
-        const docRef = await addDoc(collection(db, 'collections'), {
-          agentId: user.uid,
-          accountNo: customer.accountNo,
-          amount: totalAmount,
-          collectionDate: selectedDate,
-          installmentMonths: months,
-          createdAt: serverTimestamp()
-        });
-        
-        const newRecord = {
-          id: docRef.id,
+        const newRecord: CollectionRecord = {
+          id: 'pending-' + customer.accountNo,
           accountNo: customer.accountNo,
           amount: totalAmount,
           collectionDate: selectedDate,
           installmentMonths: months
         };
-        
-        setCollections([...collections, newRecord]);
-        setMonthlyCollections([...monthlyCollections, newRecord]);
+        setPendingCollections([...pendingCollections, newRecord]);
       }
     } catch (error) {
       console.error("Error toggling collection:", error);
@@ -188,6 +182,36 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
         next.delete(customer.accountNo);
         return next;
       });
+    }
+  };
+
+  const saveAllCollections = async () => {
+    if (pendingCollections.length === 0) return;
+    setLoading(true);
+    try {
+      const batch = writeBatch(db);
+      pendingCollections.forEach(c => {
+        const docRef = doc(collection(db, 'collections'));
+        batch.set(docRef, {
+          agentId: user.uid,
+          accountNo: c.accountNo,
+          amount: c.amount,
+          collectionDate: c.collectionDate,
+          installmentMonths: c.installmentMonths,
+          createdAt: serverTimestamp()
+        });
+      });
+      await batch.commit();
+      
+      // Refresh data
+      await fetchData();
+      setPendingCollections([]);
+      addToast("All collections saved successfully", "success");
+    } catch (error) {
+      console.error("Error saving all collections:", error);
+      addToast("Failed to save collections", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -623,6 +647,20 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
           </div>
           <span className="font-medium">{uploadingCSV ? 'Uploading...' : 'Upload CSV'}</span>
         </button>
+
+        {pendingCollections.length > 0 && (
+          <button 
+            onClick={saveAllCollections}
+            disabled={loading}
+            className="bg-green-600 hover:bg-green-700 text-white rounded-2xl p-6 shadow-sm transition-colors flex flex-col items-center justify-center gap-2 group disabled:opacity-70"
+          >
+            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+              {loading ? <Loader2 className="w-6 h-6 animate-spin text-white" /> : <Save className="w-6 h-6 text-white" />}
+            </div>
+            <span className="font-medium">{loading ? 'Saving...' : `Save All (${pendingCollections.length})`}</span>
+          </button>
+        )}
+
         <input 
           type="file" 
           accept=".csv" 

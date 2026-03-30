@@ -3,9 +3,10 @@ import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.js?url';
 import { Upload, FileText, FileDown, Loader2, AlertCircle, X, CheckCircle2, RefreshCw, Eye } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GoogleGenAI } from "@google/genai";
 
 // Set worker source
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
@@ -17,10 +18,80 @@ export default function Converter() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [conversionType, setConversionType] = useState<'csv-to-pdf' | 'pdf-to-csv'>('csv-to-pdf');
+  const [conversionType, setConversionType] = useState<'csv-to-pdf' | 'pdf-to-csv' | 'ai-pdf-extraction'>('csv-to-pdf');
+
+  const extractDataWithAI = async (fileToParse: File) => {
+    setProcessing(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      // 1. Extract text from PDF
+      const arrayBuffer = await fileToParse.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map((item: any) => item.str).join(' ');
+          fullText += pageText + '\n';
+      }
+
+      // 2. Call Gemini
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const prompt = `You are a highly accurate data extraction tool. I will provide you with a PDF document (e.g., a bank statement or invoice). Your job is to extract ONLY the following three fields from the document:
+
+1. Account Number
+
+2. Account Name
+
+3. Amount
+
+Ignore all other text, dates, addresses, and irrelevant numbers.
+Output the extracted data STRICTLY in standard CSV format. Include a header row: Account Number,Account Name,Amount. Do not include any markdown formatting, conversational text, or explanations. Only return the raw CSV text.
+
+Here is the document text:
+${fullText}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+      });
+
+      const csvText = response.text;
+      if (!csvText) {
+          throw new Error('No data extracted');
+      }
+
+      // 3. Parse CSV
+      const results = Papa.parse(csvText.trim(), {
+          header: true,
+          skipEmptyLines: true,
+          dynamicTyping: true,
+      });
+
+      if (results.errors.length > 0) {
+          throw new Error('Error parsing extracted data: ' + results.errors[0].message);
+      }
+
+      if (results.data.length === 0) {
+          throw new Error('No data found in extracted CSV.');
+      }
+
+      setHeaders(Object.keys(results.data[0] as object));
+      setParsedData(results.data);
+      setSuccess('Data extracted successfully.');
+
+    } catch (err) {
+      console.error('Error extracting data:', err);
+      setError('Error extracting data: ' + err);
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
+    console.log('File selected:', selectedFile?.name, selectedFile?.type);
     if (selectedFile) {
       if (conversionType === 'csv-to-pdf' && selectedFile.type !== 'text/csv' && !selectedFile.name.endsWith('.csv')) {
         setError('Please select a valid CSV file.');
@@ -29,29 +100,40 @@ export default function Converter() {
         setHeaders([]);
         return;
       }
-      if (conversionType === 'pdf-to-csv' && selectedFile.type !== 'application/pdf' && !selectedFile.name.endsWith('.pdf')) {
-        setError('Please select a valid PDF file.');
-        setFile(null);
-        setParsedData([]);
-        setHeaders([]);
-        return;
+      if (conversionType === 'pdf-to-csv' || conversionType === 'ai-pdf-extraction') {
+        if (selectedFile.type !== 'application/pdf' && !selectedFile.name.endsWith('.pdf')) {
+          setError('Please select a valid PDF file.');
+          setFile(null);
+          setParsedData([]);
+          setHeaders([]);
+          return;
+        }
       }
       setFile(selectedFile);
       setError(null);
       setSuccess(null);
-      if (conversionType === 'csv-to-pdf') {
-        parseCSV(selectedFile);
-      } else {
-        parsePDF(selectedFile);
-      }
+    }
+  };
+
+  const handleConvert = () => {
+    if (!file) return;
+    if (conversionType === 'csv-to-pdf') {
+      parseCSV(file);
+    } else if (conversionType === 'pdf-to-csv') {
+      parsePDF(file);
+    } else {
+      extractDataWithAI(file);
     }
   };
 
   const parsePDF = async (fileToParse: File) => {
     setProcessing(true);
+    console.log('Parsing PDF:', fileToParse.name);
     try {
       const arrayBuffer = await fileToParse.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      console.log('PDF arrayBuffer loaded, size:', arrayBuffer.byteLength);
+      const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+      console.log('PDF loaded, pages:', pdf.numPages);
       let fullText = '';
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -60,6 +142,7 @@ export default function Converter() {
         fullText += pageText + '\n';
       }
       
+      console.log('Extracted text length:', fullText.length);
       const lines = fullText.split('\n').filter(line => line.trim() !== '');
       if (lines.length === 0) {
         setError('Could not extract data from PDF.');
@@ -67,19 +150,33 @@ export default function Converter() {
         return;
       }
 
-      // Very simple CSV conversion: split by spaces or tabs if commas not present
-      const delimiter = lines[0].includes(',') ? ',' : /\s{2,}/.test(lines[0]) ? '\t' : ' ';
-      const data = lines.map(line => line.split(delimiter));
-      
-      const cols = data[0];
+      // Use Papa.parse for more robust CSV parsing
+      const results = Papa.parse(fullText, {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: true,
+      });
+
+      console.log('Papa.parse results:', results);
+
+      if (results.errors.length > 0) {
+        setError('Error parsing extracted PDF data: ' + results.errors[0].message);
+        setProcessing(false);
+        return;
+      }
+
+      if (results.data.length === 0) {
+        setError('No data found in PDF.');
+        setProcessing(false);
+        return;
+      }
+
+      const cols = Object.keys(results.data[0] as object);
       setHeaders(cols);
-      setParsedData(data.slice(1).map(row => {
-        const obj: any = {};
-        cols.forEach((header, i) => obj[header] = row[i]);
-        return obj;
-      }));
+      setParsedData(results.data);
       setSuccess('PDF parsed successfully. Ready to convert.');
     } catch (err) {
+      console.error('Error parsing PDF:', err);
       setError('Error parsing PDF: ' + err);
     } finally {
       setProcessing(false);
@@ -247,6 +344,24 @@ export default function Converter() {
                 )}
                 <CheckCircle2 className={`w-4 h-4 relative z-10 transition-opacity ${conversionType === 'pdf-to-csv' ? 'opacity-100' : 'opacity-0'}`} />
               </button>
+
+              <button
+                onClick={() => { setConversionType('ai-pdf-extraction'); clearFile(); }}
+                className={`group relative flex items-center justify-between px-6 py-4 rounded-2xl text-sm font-bold transition-all overflow-hidden ${
+                  conversionType === 'ai-pdf-extraction' 
+                    ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10' 
+                    : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-100'
+                }`}
+              >
+                <div className="flex items-center gap-3 relative z-10">
+                  <Eye className={`w-5 h-5 ${conversionType === 'ai-pdf-extraction' ? 'text-brand' : 'text-slate-400'}`} />
+                  <span>AI PDF Extraction</span>
+                </div>
+                {conversionType === 'ai-pdf-extraction' && (
+                  <div className="absolute right-0 top-0 bottom-0 w-1 bg-brand"></div>
+                )}
+                <CheckCircle2 className={`w-4 h-4 relative z-10 transition-opacity ${conversionType === 'ai-pdf-extraction' ? 'opacity-100' : 'opacity-0'}`} />
+              </button>
             </div>
 
             <div className="mt-8">
@@ -275,13 +390,23 @@ export default function Converter() {
               </label>
 
               {file && (
-                <button
-                  onClick={clearFile}
-                  className="w-full mt-4 flex items-center justify-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-all hover-lift"
-                >
-                  <X className="w-5 h-5" />
-                  Remove File
-                </button>
+                <div className="space-y-3 mt-4">
+                  <button
+                    onClick={handleConvert}
+                    disabled={processing}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white font-bold rounded-2xl hover:bg-brand-dark transition-all shadow-xl shadow-brand/20 hover-lift disabled:opacity-50"
+                  >
+                    {processing ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
+                    Convert File
+                  </button>
+                  <button
+                    onClick={clearFile}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-all hover-lift"
+                  >
+                    <X className="w-5 h-5" />
+                    Remove File
+                  </button>
+                </div>
               )}
             </div>
           </div>

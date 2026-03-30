@@ -170,25 +170,34 @@ service cloud.firestore {
     // Rules
     // ===============================================================
 
-    match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if (isOwner(userId) && isValidUser(request.resource.data) && uidUnchanged() && request.resource.data.role == 'agent' && request.resource.data.status == 'pending') || isAdmin();
-      allow update: if (isOwner(userId) && isValidUser(request.resource.data) && uidNotModified() && areImmutableFieldsUnchanged(['createdAt', 'role', 'status'])) || isAdmin();
-      allow delete: if isAdmin();
+    match /users {
+      allow list: if isAdmin();
+      match /{userId} {
+        allow read: if isOwner(userId) || isAdmin();
+        allow create: if (isOwner(userId) && isValidUser(request.resource.data) && uidUnchanged() && request.resource.data.role == 'agent' && request.resource.data.status == 'pending') || isAdmin();
+        allow update: if (isOwner(userId) && isValidUser(request.resource.data) && uidNotModified() && areImmutableFieldsUnchanged(['createdAt', 'role', 'status'])) || isAdmin();
+        allow delete: if isAdmin();
+      }
     }
 
-    match /uploads/{uploadId} {
-      allow read: if (isAuthenticated() && resource.data.agentId == request.auth.uid) || isAdmin();
-      allow create: if (isAuthenticated() && isValidUpload(request.resource.data) && request.resource.data.agentId == request.auth.uid) || isAdmin();
-      allow update: if (isAuthenticated() && isValidUpload(request.resource.data) && resource.data.agentId == request.auth.uid && areImmutableFieldsUnchanged(['agentId', 'createdAt'])) || isAdmin();
-      allow delete: if isAdmin();
+    match /uploads {
+      allow list: if isAdmin();
+      match /{uploadId} {
+        allow read: if (isAuthenticated() && resource.data.agentId == request.auth.uid) || isAdmin();
+        allow create: if (isAuthenticated() && isValidUpload(request.resource.data) && request.resource.data.agentId == request.auth.uid) || isAdmin();
+        allow update: if (isAuthenticated() && isValidUpload(request.resource.data) && resource.data.agentId == request.auth.uid && areImmutableFieldsUnchanged(['agentId', 'createdAt'])) || isAdmin();
+        allow delete: if isAdmin();
+      }
     }
 
-    match /batches/{batchId} {
-      allow read: if (isAuthenticated() && resource.data.agentId == request.auth.uid) || isAdmin();
-      allow create: if (isAuthenticated() && isValidBatch(request.resource.data) && request.resource.data.agentId == request.auth.uid) || isAdmin();
-      allow update: if (isAuthenticated() && isValidBatch(request.resource.data) && resource.data.agentId == request.auth.uid && areImmutableFieldsUnchanged(['agentId', 'uploadId', 'createdAt', 'accounts', 'totalAmount', 'accountCount', 'batchNumber'])) || isAdmin();
-      allow delete: if (isAuthenticated() && resource.data.agentId == request.auth.uid) || isAdmin();
+    match /batches {
+      allow list: if isAdmin();
+      match /{batchId} {
+        allow read: if (isAuthenticated() && resource.data.agentId == request.auth.uid) || isAdmin();
+        allow create: if (isAuthenticated() && isValidBatch(request.resource.data) && request.resource.data.agentId == request.auth.uid) || isAdmin();
+        allow update: if (isAuthenticated() && isValidBatch(request.resource.data) && resource.data.agentId == request.auth.uid && areImmutableFieldsUnchanged(['agentId', 'uploadId', 'createdAt', 'accounts', 'totalAmount', 'accountCount', 'batchNumber'])) || isAdmin();
+        allow delete: if (isAuthenticated() && resource.data.agentId == request.auth.uid) || isAdmin();
+      }
     }
 
     match /customers/{customerId} {

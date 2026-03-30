@@ -135,6 +135,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
         setUploads(uploadsList);
       } catch (error) {
         console.error("Error fetching admin stats, users or uploads:", error);
+        handleFirestoreError(error, OperationType.LIST, 'users/uploads/batches');
       } finally {
         setLoading(false);
       }
