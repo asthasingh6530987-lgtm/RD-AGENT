@@ -249,19 +249,19 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-      case 'processing': return 'bg-blue-50 text-blue-700 border-blue-100';
-      case 'failed': return 'bg-red-50 text-brand border-red-100';
-      default: return 'bg-amber-50 text-amber-700 border-amber-100';
+      case 'completed': return 'bg-success/10 text-success border-success/20';
+      case 'processing': return 'bg-info/10 text-info border-info/20';
+      case 'failed': return 'bg-brand/10 text-brand border-brand/20';
+      default: return 'bg-gold/10 text-gold border-gold/20';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'completed': return <CheckCircle2 className="w-3.5 h-3.5" />;
-      case 'processing': return <Clock className="w-3.5 h-3.5" />;
-      case 'failed': return <AlertCircle className="w-3.5 h-3.5" />;
-      default: return <Clock className="w-3.5 h-3.5" />;
+      case 'completed': return <CheckCircle2 className="w-4 h-4" />;
+      case 'processing': return <RefreshCw className="w-4 h-4 animate-spin" />;
+      case 'failed': return <AlertCircle className="w-4 h-4" />;
+      default: return <Clock className="w-4 h-4" />;
     }
   };
 
@@ -544,25 +544,25 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
   return (
     <div className="space-y-10 pb-12">
       {/* Welcome Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 sm:gap-6">
         <div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
+          <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight mb-2">
             Welcome, <span className="text-brand">{user.displayName || 'Agent'}</span>
           </h1>
-          <p className="text-slate-500 font-medium tracking-wide uppercase text-[10px]">
+          <p className="text-slate-600 font-bold tracking-wide uppercase text-[10px]">
             Manage your RD account batches and collections
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
           <button
             onClick={() => setShowManualAdd(!showManualAdd)}
-            className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm hover:shadow-md hover-lift flex items-center gap-2"
+            className="flex-1 sm:flex-none justify-center px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm hover:shadow-md hover-lift flex items-center gap-2"
           >
             <FileText className="w-4 h-4" />
             Manual Entry
           </button>
           <button
-            className="px-6 py-3 bg-brand text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand/90 transition-all shadow-lg shadow-brand/20 hover:shadow-brand/30 hover-lift flex items-center gap-2"
+            className="flex-1 sm:flex-none justify-center px-6 py-3 bg-brand text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand/90 transition-all shadow-lg shadow-brand/20 hover:shadow-brand/30 hover-lift flex items-center gap-2"
             onClick={() => document.getElementById('file-upload')?.click()}
           >
             <Upload className="w-4 h-4" />
@@ -572,20 +572,20 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
       </div>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="glass-card p-6 rounded-3xl border border-slate-100"
+          className="glass-card-gold p-5 sm:p-6 rounded-3xl border border-gold/20 shadow-premium group hover:border-brand/40 transition-all hover-lift"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center">
-              <IndianRupee className="w-6 h-6 text-emerald-600" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand/10 rounded-2xl flex items-center justify-center group-hover:bg-brand/20 transition-colors shadow-inner-light">
+              <IndianRupee className="w-5 h-5 sm:w-6 sm:h-6 text-brand" />
             </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Value</span>
+            <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Total Value</span>
           </div>
-          <div className="text-3xl font-black text-slate-900 tracking-tight">
+          <div className="text-2xl sm:text-3xl font-black text-success tracking-tight group-hover:text-success transition-colors">
             ₹{savedBatches.reduce((sum, b) => sum + b.totalAmount, 0).toLocaleString('en-IN')}
           </div>
         </motion.div>
@@ -594,15 +594,15 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="glass-card p-6 rounded-3xl border border-slate-100"
+          className="glass-card-gold p-5 sm:p-6 rounded-3xl border border-gold/20 shadow-premium group hover:border-gold/40 transition-all hover-lift"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
-              <FileText className="w-6 h-6 text-blue-600" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gold/10 rounded-2xl flex items-center justify-center group-hover:bg-gold/20 transition-colors shadow-inner-light">
+              <FileText className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
             </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Batches</span>
+            <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Total Batches</span>
           </div>
-          <div className="text-3xl font-black text-slate-900 tracking-tight">
+          <div className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight group-hover:text-gold transition-colors">
             {savedBatches.length}
           </div>
         </motion.div>
@@ -611,15 +611,15 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="glass-card p-6 rounded-3xl border border-slate-100"
+          className="glass-card-gold p-5 sm:p-6 rounded-3xl border border-gold/20 shadow-premium group hover:border-brand/40 transition-all hover-lift"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
-              <Clock className="w-6 h-6 text-amber-600" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand/10 rounded-2xl flex items-center justify-center group-hover:bg-brand/20 transition-colors shadow-inner-light">
+              <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-brand" />
             </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending</span>
+            <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Pending</span>
           </div>
-          <div className="text-3xl font-black text-slate-900 tracking-tight">
+          <div className="text-2xl sm:text-3xl font-black text-info tracking-tight group-hover:text-info transition-colors">
             {savedBatches.filter(b => b.status === 'pending').length}
           </div>
         </motion.div>
@@ -628,15 +628,15 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="glass-card p-6 rounded-3xl border border-slate-100"
+          className="glass-card-gold p-5 sm:p-6 rounded-3xl border border-gold/20 shadow-premium group hover:border-gold/40 transition-all hover-lift"
         >
           <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-brand/5 rounded-2xl flex items-center justify-center">
-              <CheckCircle2 className="w-6 h-6 text-brand" />
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gold/10 rounded-2xl flex items-center justify-center group-hover:bg-gold/20 transition-colors shadow-inner-light">
+              <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
             </div>
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Completed</span>
+            <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Completed</span>
           </div>
-          <div className="text-3xl font-black text-slate-900 tracking-tight">
+          <div className="text-2xl sm:text-3xl font-black text-success tracking-tight group-hover:text-success transition-colors">
             {savedBatches.filter(b => b.status === 'completed').length}
           </div>
         </motion.div>
@@ -647,17 +647,22 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
         {/* Left Column: Upload & Actions */}
         <div className="lg:col-span-4 space-y-8">
           {/* File Upload Area */}
-          <div className="glass-card p-8 rounded-[2rem] border border-slate-100 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+          <div className="glass-card-gold p-5 sm:p-8 rounded-[2.5rem] border border-gold/20 relative overflow-hidden shadow-premium group">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-brand/5 rounded-full -mr-24 -mt-24 blur-3xl group-hover:bg-brand/10 transition-colors" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-gold/5 rounded-full -ml-24 -mb-24 blur-3xl group-hover:bg-gold/10 transition-colors" />
             
             <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-3">
-              <Upload className="w-6 h-6 text-brand" />
+              <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center">
+                <Upload className="w-5 h-5 text-brand" />
+              </div>
               Upload Batch
             </h3>
 
             <div 
-              className={`relative border-2 border-dashed rounded-3xl p-8 transition-all duration-300 text-center ${
-                file ? 'border-brand bg-brand/5' : 'border-slate-200 hover:border-brand/30 hover:bg-slate-50'
+              className={`relative border-2 border-dashed rounded-[2rem] p-6 sm:p-10 transition-all duration-500 text-center group/drop ${
+                file 
+                  ? 'border-brand bg-brand/5 shadow-inner' 
+                  : 'border-slate-200 hover:border-gold/50 hover:bg-gold/5 hover:shadow-lg hover:shadow-gold/5'
               }`}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -676,37 +681,46 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
               />
               
               {file ? (
-                <div className="space-y-4">
-                  <div className="w-16 h-16 bg-brand rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-brand/20">
-                    <FileText className="w-8 h-8 text-white" />
+                <motion.div 
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  className="space-y-4"
+                >
+                  <div className="w-20 h-20 bg-brand rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-brand/30 relative">
+                    <FileText className="w-10 h-10 text-white" />
+                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-success rounded-full flex items-center justify-center shadow-md">
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                    </div>
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-900 truncate max-w-[200px] mx-auto">{file.name}</p>
-                    <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest mt-1">
-                      {(file.size / 1024).toFixed(1)} KB
-                    </p>
+                    <p className="text-base font-black text-slate-900 truncate max-w-[220px] mx-auto">{file.name}</p>
+                    <div className="flex items-center justify-center gap-2 mt-1">
+                      <span className="px-2 py-0.5 bg-brand/10 text-brand text-[10px] font-black rounded-md uppercase tracking-tighter">CSV</span>
+                      <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">
+                        {(file.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      onClick={handleClearFile}
-                      className="p-2 text-slate-400 hover:text-brand transition-colors"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
+                  <button
+                    onClick={handleClearFile}
+                    className="mt-2 px-4 py-2 text-slate-400 hover:text-brand hover:bg-brand/5 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mx-auto"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Remove File
+                  </button>
+                </motion.div>
               ) : (
                 <div className="space-y-4">
-                  <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto">
-                    <Upload className="w-8 h-8 text-slate-300" />
+                  <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto group-hover/drop:bg-white group-hover/drop:shadow-xl group-hover/drop:scale-110 transition-all duration-500">
+                    <Upload className="w-10 h-10 text-slate-300 group-hover/drop:text-gold transition-colors" />
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-slate-900">Drop your CSV here</p>
-                    <p className="text-xs text-slate-400 mt-1">or click to browse files</p>
+                    <p className="text-base font-black text-slate-900">Drop your CSV here</p>
+                    <p className="text-xs font-bold text-slate-500 mt-1">or click to browse files</p>
                   </div>
                   <button 
                     onClick={() => document.getElementById('file-upload')?.click()}
-                    className="text-xs font-black text-brand uppercase tracking-widest hover:underline"
+                    className="px-6 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black text-brand uppercase tracking-widest hover:border-brand hover:bg-brand/5 transition-all shadow-sm"
                   >
                     Select File
                   </button>
@@ -717,20 +731,21 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
             <button
               onClick={processFile}
               disabled={!file || processing}
-              className={`w-full mt-8 py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${
+              className={`w-full mt-8 py-5 rounded-2xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-3 relative overflow-hidden group/btn ${
                 !file || processing
                   ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  : 'bg-slate-900 text-white shadow-xl shadow-slate-900/20 hover:shadow-slate-900/30 hover-lift'
+                  : 'bg-slate-900 text-white shadow-2xl shadow-slate-900/30 hover:shadow-slate-900/40 hover-lift'
               }`}
             >
               {processing ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-5 h-5 animate-spin" />
                   Processing...
                 </>
               ) : (
                 <>
-                  <RefreshCw className="w-4 h-4" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-brand/0 via-white/10 to-brand/0 -translate-x-full group-hover/btn:animate-shimmer" />
+                  <RefreshCw className="w-5 h-5 group-hover/btn:rotate-180 transition-transform duration-700" />
                   Process Batch
                 </>
               )}
@@ -741,45 +756,49 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
           <AnimatePresence>
             {showManualAdd && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="glass-card p-8 rounded-[2rem] border border-slate-100 overflow-hidden"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="glass-card-gold p-5 sm:p-8 rounded-[2.5rem] border border-gold/20 overflow-hidden shadow-premium"
               >
                 <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-3">
-                  <FileText className="w-6 h-6 text-brand" />
+                  <div className="w-10 h-10 bg-gold/10 rounded-xl flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-gold" />
+                  </div>
                   Manual Entry
                 </h3>
-                <form onSubmit={handleManualAdd} className="space-y-5">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Account Number</label>
+                <form onSubmit={handleManualAdd} className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Account Number</label>
                     <input
                       type="text"
                       value={manualAccount.accountNo}
                       onChange={(e) => setManualAccount({...manualAccount, accountNo: e.target.value})}
-                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all font-medium"
+                      className="w-full px-4 sm:px-6 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all shadow-sm"
                       placeholder="Enter 10-digit number"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Account Name</label>
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Account Name</label>
                     <input
                       type="text"
                       value={manualAccount.accountName}
                       onChange={(e) => setManualAccount({...manualAccount, accountName: e.target.value})}
-                      className="w-full px-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all font-medium"
+                      className="w-full px-4 sm:px-6 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all shadow-sm"
                       placeholder="Optional"
                     />
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Amount (₹)</label>
-                    <div className="relative">
-                      <IndianRupee className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Amount (₹)</label>
+                    <div className="relative group">
+                      <div className="absolute left-4 sm:left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within:text-brand transition-colors">
+                        <IndianRupee className="w-full h-full" />
+                      </div>
                       <input
                         type="number"
                         value={manualAccount.amount}
                         onChange={(e) => setManualAccount({...manualAccount, amount: e.target.value})}
-                        className="w-full pl-12 pr-5 py-3.5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none transition-all font-medium"
+                        className="w-full pl-12 sm:pl-14 pr-4 sm:pr-6 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all shadow-sm"
                         placeholder="Max 20,000"
                       />
                     </div>
@@ -787,9 +806,9 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                   <button
                     type="submit"
                     disabled={processing}
-                    className="w-full py-4 bg-brand text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand/90 transition-all shadow-lg shadow-brand/20 hover:shadow-brand/30 hover-lift flex items-center justify-center gap-2"
+                    className="w-full py-5 bg-brand text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand/90 transition-all shadow-xl shadow-brand/20 hover:shadow-brand/30 hover-lift flex items-center justify-center gap-3"
                   >
-                    {processing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    {processing ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle2 className="w-5 h-5" />}
                     Add Account
                   </button>
                 </form>
@@ -800,150 +819,171 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
 
         {/* Right Column: Batch List */}
         <div className="lg:col-span-8">
-          <div className="glass-card rounded-[2rem] border border-slate-100 overflow-hidden">
-            <div className="p-8 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+          <div className="glass-card-gold rounded-[2.5rem] border border-gold/20 overflow-hidden shadow-premium">
+            <div className="p-6 sm:p-10 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6 sm:gap-8 bg-gradient-to-br from-gold/5 to-transparent">
               <div>
-                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Recent Batches</h3>
-                <p className="text-slate-400 text-xs font-medium uppercase tracking-widest mt-1">History of your processed lists</p>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand/10 rounded-2xl flex items-center justify-center shadow-inner-light shrink-0">
+                    <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-brand" />
+                  </div>
+                  Recent Batches
+                </h3>
+                <p className="text-[10px] sm:text-[11px] font-black text-slate-400 uppercase tracking-widest mt-2 ml-14 sm:ml-16">
+                  {filteredBatches.length} batches found
+                </p>
               </div>
               
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 w-full sm:w-auto">
+                <div className="relative group w-full sm:w-auto flex-1 sm:flex-none">
+                  <Search className="absolute left-4 sm:left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-brand transition-colors" />
                   <input
                     type="text"
-                    placeholder="Search batches..."
+                    placeholder="Search batch or account..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-11 pr-4 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs focus:ring-2 focus:ring-brand/20 outline-none w-full sm:w-64 transition-all"
+                    className="pl-10 sm:pl-12 pr-4 sm:pr-6 py-3 sm:py-4 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-brand/10 focus:border-brand outline-none transition-all w-full sm:w-72 shadow-sm"
                   />
                 </div>
-                <div className="relative" ref={exportAllRef}>
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="relative" ref={exportAllRef}>
+                    <button
+                      onClick={() => setExportAllOpen(!exportAllOpen)}
+                      className="p-3 sm:p-4 bg-white border border-slate-200 text-slate-600 rounded-2xl hover:bg-gold/5 hover:border-gold/30 transition-all shadow-sm hover:shadow-md active:scale-95"
+                      title="Export All"
+                    >
+                      <Download className="w-5 h-5 sm:w-6 sm:h-6" />
+                    </button>
+                    <AnimatePresence>
+                      {exportAllOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                          className="absolute right-0 sm:right-0 -right-12 mt-3 w-64 bg-white border border-gold/10 rounded-3xl shadow-premium z-20 p-3"
+                        >
+                          <div className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-2">Export All Batches</div>
+                          <button onClick={() => { handleExportAllBatches('detailed'); setExportAllOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-brand/5 rounded-2xl transition-all flex items-center gap-4 group">
+                            <div className="w-3 h-3 rounded-full bg-brand shadow-sm group-hover:scale-125 transition-transform" /> Detailed Report
+                          </button>
+                          <button onClick={() => { handleExportAllBatches('portal'); setExportAllOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-gold/5 rounded-2xl transition-all flex items-center gap-4 group">
+                            <div className="w-3 h-3 rounded-full bg-gold shadow-sm group-hover:scale-125 transition-transform" /> Portal Format
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                   <button
-                    onClick={() => setExportAllOpen(!exportAllOpen)}
-                    className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl text-slate-600 hover:bg-slate-100 transition-all"
+                    onClick={() => setShowDeleteAllConfirm(true)}
+                    className="p-3 sm:p-4 bg-white border border-slate-200 text-slate-400 hover:text-brand hover:bg-red-50 hover:border-brand/30 rounded-2xl transition-all shadow-sm hover:shadow-md active:scale-95"
+                    title="Delete All"
                   >
-                    <Download className="w-5 h-5" />
+                    <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
-                  <AnimatePresence>
-                    {exportAllOpen && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                        className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-2xl border border-slate-100 p-2 z-20"
-                      >
-                        <button
-                          onClick={() => { handleExportAllBatches('detailed'); setExportAllOpen(false); }}
-                          className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-2"
-                        >
-                          <FileText className="w-4 h-4 text-brand" />
-                          Export as CSV
-                        </button>
-                        <button
-                          onClick={() => { handleExportAllBatches('portal'); setExportAllOpen(false); }}
-                          className="w-full text-left px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors flex items-center gap-2"
-                        >
-                          <Download className="w-4 h-4 text-red-500" />
-                          Export as PDF
-                        </button>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
                 </div>
-                <button
-                  onClick={() => setShowDeleteAllConfirm(true)}
-                  className="p-2.5 bg-red-50 border border-red-100 rounded-xl text-brand hover:bg-brand hover:text-white transition-all"
-                  title="Delete all batches"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/50">
-                    <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Batch Info</th>
-                    <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</th>
-                    <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
-                    <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Reference</th>
-                    <th className="px-8 py-5 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
+                  <tr className="bg-slate-50/80 border-b border-slate-100">
+                    <th className="px-10 py-8 text-left">
+                      <button onClick={() => setSortOption('date')} className="flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-brand transition-colors group">
+                        Date & Time <ArrowUpDown className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      </button>
+                    </th>
+                    <th className="px-10 py-8 text-left">
+                      <button onClick={() => setSortOption('count')} className="flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-brand transition-colors group">
+                        Accounts <ArrowUpDown className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      </button>
+                    </th>
+                    <th className="px-10 py-8 text-left">
+                      <button onClick={() => setSortOption('amount')} className="flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-brand transition-colors group">
+                        Amount <ArrowUpDown className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      </button>
+                    </th>
+                    <th className="px-10 py-8 text-left">
+                      <button onClick={() => setSortOption('status')} className="flex items-center gap-3 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-brand transition-colors group">
+                        Status <ArrowUpDown className="w-3.5 h-3.5 group-hover:scale-110 transition-transform" />
+                      </button>
+                    </th>
+                    <th className="px-10 py-8 text-right text-[10px] font-black text-slate-500 uppercase tracking-widest">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {loadingBatches ? (
                     <tr>
-                      <td colSpan={5} className="px-8 py-20 text-center">
-                        <Loader2 className="w-10 h-10 animate-spin text-brand mx-auto mb-4" />
-                        <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">Loading batches...</p>
+                      <td colSpan={5} className="px-10 py-32 text-center">
+                        <div className="relative w-20 h-20 mx-auto mb-6">
+                          <div className="absolute inset-0 border-4 border-brand/10 rounded-full" />
+                          <div className="absolute inset-0 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+                          <div className="absolute inset-4 border-4 border-gold/20 border-b-transparent rounded-full animate-spin-reverse" />
+                        </div>
+                        <p className="text-slate-600 text-[11px] font-black uppercase tracking-widest">Loading batches...</p>
                       </td>
                     </tr>
                   ) : paginatedBatches.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-8 py-20 text-center">
-                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                          <FileText className="w-10 h-10 text-slate-200" />
+                      <td colSpan={5} className="px-10 py-32 text-center">
+                        <div className="w-28 h-28 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mx-auto mb-8 shadow-inner relative">
+                          <FileText className="w-14 h-14 text-slate-200" />
+                          <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-2xl shadow-md flex items-center justify-center">
+                            <Search className="w-5 h-5 text-slate-300" />
+                          </div>
                         </div>
-                        <p className="text-slate-900 font-bold">No batches found</p>
-                        <p className="text-slate-400 text-xs mt-1">Upload a CSV to get started</p>
+                        <p className="text-2xl font-black text-slate-900 tracking-tight">No batches found</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-3">Upload a CSV to get started</p>
                       </td>
                     </tr>
                   ) : (
                     paginatedBatches.map((batch) => (
                       <motion.tr 
-                        key={batch.id}
-                        layout
+                        key={`${batch.id}-desktop`}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="hover:bg-slate-50/50 transition-colors group"
+                        className="group hover:bg-gold/5 transition-all cursor-pointer relative"
+                        onClick={() => setSelectedBatch(batch)}
                       >
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center font-black text-slate-900 text-xs">
-                              #{batch.batchNumber || '-'}
-                            </div>
-                            <div>
-                              <p className="text-sm font-black text-slate-900">Batch {batch.batchNumber || 'N/A'}</p>
-                              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
-                                {batch.accountCount} Accounts • {batch.createdAt?.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}
-                              </p>
-                            </div>
+                        <td className="px-10 py-10">
+                          <div className="flex flex-col">
+                            <span className="text-base font-black text-slate-900 tracking-tight group-hover:text-brand transition-colors">
+                              {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
+                            </span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
+                              <Clock className="w-3 h-3" />
+                              {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-8 py-6">
-                          <span className="text-sm font-black text-slate-900">₹{batch.totalAmount.toLocaleString('en-IN')}</span>
+                        <td className="px-10 py-10">
+                          <div className="flex items-center gap-5">
+                            <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-sm font-black text-slate-900 shadow-sm group-hover:bg-white group-hover:shadow-md transition-all">
+                              {batch.accountCount}
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Records</span>
+                          </div>
                         </td>
-                        <td className="px-8 py-6">
-                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(batch.status)}`}>
+                        <td className="px-10 py-10">
+                          <div className="flex flex-col">
+                            <span className="text-lg font-black text-success tracking-tight">
+                              ₹{batch.totalAmount.toLocaleString('en-IN')}
+                            </span>
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Total Value</span>
+                          </div>
+                        </td>
+                        <td className="px-10 py-10">
+                          <div className={`inline-flex items-center gap-2.5 px-5 py-2.5 rounded-2xl border text-[10px] font-black uppercase tracking-widest shadow-sm transition-all group-hover:shadow-md ${getStatusColor(batch.status)}`}>
                             {getStatusIcon(batch.status)}
                             {batch.status}
-                          </span>
+                          </div>
                         </td>
-                        <td className="px-8 py-6">
-                          <span className="text-xs font-bold text-slate-600 font-mono bg-slate-100 px-2 py-1 rounded-lg">
-                            {batch.referenceNumber || '---'}
-                          </span>
-                        </td>
-                        <td className="px-8 py-6">
-                          <div className="flex items-center justify-end gap-2 transition-opacity">
-                            <button
-                              onClick={() => setSelectedBatch(batch)}
-                              className="p-2 text-slate-400 hover:text-brand transition-colors"
-                              title="View details"
+                        <td className="px-10 py-8 text-right">
+                          <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setSelectedBatch(batch); }}
+                              className="p-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-brand hover:text-white hover:border-brand transition-all shadow-sm active:scale-90"
                             >
                               <FileText className="w-5 h-5" />
-                            </button>
-                            <button
-                              onClick={() => {
-                                setSelectedBatch(batch);
-                                setShowDeleteConfirm(true);
-                              }}
-                              className="p-2 text-slate-400 hover:text-brand transition-colors"
-                              title="Delete batch"
-                            >
-                              <Trash2 className="w-5 h-5" />
                             </button>
                           </div>
                         </td>
@@ -954,29 +994,88 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
               </table>
             </div>
 
+            {/* Mobile Card View */}
+            <div className="md:hidden flex flex-col divide-y divide-slate-100">
+              {loadingBatches ? (
+                <div className="p-10 text-center">
+                  <div className="relative w-16 h-16 mx-auto mb-4">
+                    <div className="absolute inset-0 border-4 border-brand/10 rounded-full" />
+                    <div className="absolute inset-0 border-4 border-brand border-t-transparent rounded-full animate-spin" />
+                  </div>
+                  <p className="text-slate-600 text-[11px] font-black uppercase tracking-widest">Loading batches...</p>
+                </div>
+              ) : paginatedBatches.length === 0 ? (
+                <div className="p-10 text-center">
+                  <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-inner">
+                    <FileText className="w-10 h-10 text-slate-200" />
+                  </div>
+                  <p className="text-xl font-black text-slate-900 tracking-tight">No batches found</p>
+                </div>
+              ) : (
+                paginatedBatches.map((batch) => (
+                  <div 
+                    key={`${batch.id}-mobile`}
+                    className="p-5 hover:bg-slate-50 transition-colors cursor-pointer"
+                    onClick={() => setSelectedBatch(batch)}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <span className="text-sm font-black text-slate-900 tracking-tight">
+                          {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
+                        </span>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                        </span>
+                      </div>
+                      <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-widest shadow-sm ${getStatusColor(batch.status)}`}>
+                        {getStatusIcon(batch.status)}
+                        {batch.status}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-4 bg-slate-50 p-3 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-sm font-black text-slate-900 shadow-sm">
+                          {batch.accountCount}
+                        </div>
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Records</span>
+                      </div>
+                      <div className="text-right flex flex-col items-end">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">Total Value</span>
+                        <span className="text-base font-black text-success tracking-tight">
+                          ₹{batch.totalAmount.toLocaleString('en-IN')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="p-6 bg-slate-50/50 border-t border-slate-50 flex items-center justify-between">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+              <div className="p-4 sm:p-6 bg-slate-50/80 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest text-center sm:text-left">
                   Showing {((currentPage - 1) * BATCHES_PER_PAGE) + 1} to {Math.min(currentPage * BATCHES_PER_PAGE, filteredBatches.length)} of {filteredBatches.length}
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-center">
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
-                    className="p-2 rounded-xl border border-slate-200 text-slate-400 disabled:opacity-30 hover:bg-white transition-all"
+                    className="p-2 sm:p-3 rounded-xl border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-white transition-all shadow-sm"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-wrap justify-center">
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
                       <button
                         key={`btn-${pageNum}`}
                         onClick={() => setCurrentPage(pageNum)}
-                        className={`w-10 h-10 rounded-xl text-xs font-black transition-all ${
+                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl text-xs font-black transition-all ${
                           currentPage === pageNum 
                             ? 'bg-slate-900 text-white shadow-lg shadow-slate-900/20' 
-                            : 'text-slate-400 hover:bg-white border border-transparent hover:border-slate-200'
+                            : 'text-slate-500 hover:bg-white border border-slate-200 hover:border-brand/20 hover:text-brand'
                         }`}
                       >
                         {pageNum}
@@ -986,9 +1085,9 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
-                    className="p-2 rounded-xl border border-slate-200 text-slate-400 disabled:opacity-30 hover:bg-white transition-all"
+                    className="p-2 sm:p-3 rounded-xl border border-slate-200 text-slate-600 disabled:opacity-30 hover:bg-white transition-all shadow-sm"
                   >
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
                 </div>
               </div>
@@ -1000,172 +1099,264 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
     {/* Batch Detail Modal */}
       <AnimatePresence>
         {selectedBatch && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setSelectedBatch(null); setShowDeleteConfirm(false); }}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+              exit={{ opacity: 0, scale: 0.9, y: 40 }}
+              className="glass-card-gold rounded-[2.5rem] shadow-premium w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh] relative z-10 border border-gold/30"
             >
-              <div className="flex items-center justify-between p-5 border-b border-slate-100">
-                <h3 className="text-lg font-bold text-slate-900">Batch Details</h3>
-                <div className="flex items-center gap-2">
+              {/* Modal Header */}
+              <div className="p-6 sm:p-8 border-b border-gold/20 bg-gradient-to-br from-gold/10 via-white to-transparent flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto">
+                  <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-gold/30 to-gold/10 rounded-2xl flex items-center justify-center shadow-gold/20 shadow-lg border border-gold/20 shrink-0">
+                    <FileText className="w-6 h-6 sm:w-7 sm:h-7 text-gold" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none mb-2">Batch Details</h3>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                      <span className="px-2.5 py-1 bg-slate-100 text-slate-500 rounded-lg text-[9px] font-black uppercase tracking-widest border border-slate-200">
+                        ID: {selectedBatch.id.slice(-12)}
+                      </span>
+                      {selectedBatch.batchNumber && (
+                        <span className="px-2.5 py-1 bg-gold/10 text-gold rounded-lg text-[9px] font-black uppercase tracking-widest border border-gold/20">
+                          Batch #{selectedBatch.batchNumber}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 self-end sm:self-auto w-full sm:w-auto justify-end">
                   {!showDeleteConfirm && (
                     <div className="relative" ref={exportBatchRef}>
                       <button
                         onClick={() => setExportBatchOpen(!exportBatchOpen)}
-                        className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-colors"
+                        className="p-3 sm:p-4 bg-white border border-gold/30 text-gold rounded-2xl hover:bg-gold/5 transition-all shadow-sm hover:shadow-gold/10 hover:shadow-lg active:scale-95"
                         title="Export Batch"
                       >
-                        <Download className="w-5 h-5" />
+                        <Download className="w-5 h-5 sm:w-6 sm:h-6" />
                       </button>
-                      {exportBatchOpen && (
-                        <div className="absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-slate-100 transition-all z-10">
-                          <div className="p-1">
-                            <button
-                              onClick={() => {
-                                handleExportBatch('detailed');
-                                setExportBatchOpen(false);
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
-                            >
-                              Detailed (All Columns)
+                      <AnimatePresence>
+                        {exportBatchOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                            className="absolute right-0 mt-3 w-64 bg-white border border-gold/10 rounded-3xl shadow-premium z-20 p-3 overflow-hidden"
+                          >
+                            <div className="px-4 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-2">Export Options</div>
+                            <button onClick={() => { handleExportBatch('detailed'); setExportBatchOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-brand/5 rounded-2xl transition-all flex items-center gap-4 group">
+                              <div className="w-3 h-3 rounded-full bg-brand shadow-sm group-hover:scale-125 transition-transform" /> 
+                              <span>Detailed Report</span>
                             </button>
-                            <button
-                              onClick={() => {
-                                handleExportBatch('portal');
-                                setExportBatchOpen(false);
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
-                            >
-                              Portal Format (A/C & Amount)
+                            <button onClick={() => { handleExportBatch('portal'); setExportBatchOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-gold/5 rounded-2xl transition-all flex items-center gap-4 group">
+                              <div className="w-3 h-3 rounded-full bg-gold shadow-sm group-hover:scale-125 transition-transform" /> 
+                              <span>Portal Format</span>
                             </button>
-                            <button
-                              onClick={() => {
-                                handleExportBatch('summary');
-                                setExportBatchOpen(false);
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 rounded-lg transition-colors"
-                            >
-                              Batch Totals Summary
-                            </button>
-                          </div>
-                        </div>
-                      )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   )}
                   <button
-                    onClick={() => setShowDeleteConfirm(!showDeleteConfirm)}
-                    className={`p-2 rounded-full transition-colors ${
-                      showDeleteConfirm 
-                        ? 'text-slate-500 bg-slate-100 hover:bg-slate-200' 
-                        : 'text-red-500 hover:text-red-700 hover:bg-red-50'
-                    }`}
-                    title={showDeleteConfirm ? "Cancel Delete" : "Delete Batch"}
+                    onClick={() => { setSelectedBatch(null); setShowDeleteConfirm(false); }}
+                    className="p-3 sm:p-4 bg-slate-100 text-slate-400 rounded-2xl hover:bg-slate-200 hover:text-slate-600 transition-all shadow-sm active:scale-95"
                   >
-                    {showDeleteConfirm ? <X className="w-5 h-5" /> : <Trash2 className="w-5 h-5" />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSelectedBatch(null);
-                      setShowDeleteConfirm(false);
-                    }}
-                    className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
-                  >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5 sm:w-6 sm:h-6" />
                   </button>
                 </div>
               </div>
               
-              <div className="p-5 overflow-y-auto flex-1">
+              <div className="p-8 overflow-y-auto flex-1 space-y-8 custom-scrollbar bg-slate-50/30">
                 {showDeleteConfirm && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
-                    className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl"
+                    className="p-6 bg-red-50 border border-red-100 rounded-3xl"
                   >
-                    <p className="text-sm text-red-800 font-medium mb-3">
-                      Are you sure you want to delete this batch? This action cannot be undone.
-                    </p>
-                    <div className="flex gap-2">
+                    <div className="flex items-start gap-4 mb-4">
+                      <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center shrink-0">
+                        <Trash2 className="w-5 h-5 text-brand" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-1">Confirm Deletion</h4>
+                        <p className="text-xs font-bold text-slate-600">Are you sure you want to delete this batch? This action cannot be undone.</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
                       <button
                         onClick={handleDeleteBatch}
                         disabled={deletingBatch}
-                        className="flex-1 bg-red-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-red-700 transition-colors disabled:opacity-50"
+                        className="flex-1 bg-brand text-white py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand/90 transition-all shadow-lg shadow-brand/20 disabled:opacity-50"
                       >
                         {deletingBatch ? 'Deleting...' : 'Yes, Delete Batch'}
                       </button>
                       <button
                         onClick={() => setShowDeleteConfirm(false)}
-                        className="flex-1 bg-white text-slate-700 border border-slate-200 py-2 rounded-lg text-sm font-bold hover:bg-slate-50 transition-colors"
+                        className="flex-1 bg-white text-slate-700 border border-slate-200 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
                       >
                         Cancel
                       </button>
                     </div>
                   </motion.div>
                 )}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-sm text-slate-500 font-medium mb-1">Total Amount</p>
-                    <p className="text-xl font-bold text-slate-900">₹{selectedBatch.totalAmount.toLocaleString('en-IN')}</p>
+                {/* Status & Summary Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+                  <div className="bg-white p-5 sm:p-6 rounded-[2rem] border border-gold/10 shadow-sm hover:shadow-premium transition-all hover-lift">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-info shadow-info/20 shadow-lg" />
+                      Status
+                    </div>
+                    <div className={`inline-flex items-center gap-2.5 px-4 sm:px-5 py-2 sm:py-2.5 rounded-2xl border text-[10px] font-black uppercase tracking-widest shadow-sm ${getStatusColor(selectedBatch.status)}`}>
+                      {getStatusIcon(selectedBatch.status)}
+                      {selectedBatch.status}
+                    </div>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <p className="text-sm text-slate-500 font-medium mb-1">Accounts</p>
-                    <p className="text-xl font-bold text-slate-900">{selectedBatch.accountCount}</p>
+                  <div className="bg-white p-5 sm:p-6 rounded-[2rem] border border-gold/10 shadow-sm hover:shadow-premium transition-all hover-lift">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-success shadow-success/20 shadow-lg" />
+                      Total Amount
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-black text-success tracking-tight flex items-baseline gap-1">
+                      <span className="text-sm">₹</span>
+                      {selectedBatch.totalAmount.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                  <div className="bg-white p-5 sm:p-6 rounded-[2rem] border border-gold/10 shadow-sm hover:shadow-premium transition-all hover-lift">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-gold shadow-gold/20 shadow-lg" />
+                      Accounts
+                    </div>
+                    <p className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">{selectedBatch.accountCount}</p>
                   </div>
                 </div>
 
-                <form onSubmit={handleUpdateReference} className="mb-6">
-                  <label htmlFor="referenceNumber" className="block text-sm font-medium text-slate-700 mb-2">
+                {/* Reference Number Update */}
+                <div className="bg-white p-6 sm:p-8 rounded-[2.5rem] border border-gold/10 shadow-premium-hover relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-gold/5 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-gold/10 transition-colors" />
+                  <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest mb-5 flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full bg-brand shadow-brand/20 shadow-lg" />
                     DOP Reference Number
-                  </label>
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      id="referenceNumber"
-                      value={referenceInput}
-                      onChange={(e) => setReferenceInput(e.target.value)}
-                      placeholder="Enter reference number..."
-                      className="flex-1 px-4 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                    />
+                  </h4>
+                  <form onSubmit={handleUpdateReference} className="flex flex-col sm:flex-row gap-4 relative z-10 w-full">
+                    <div className="flex-1 relative w-full">
+                      <input
+                        type="text"
+                        value={referenceInput}
+                        onChange={(e) => setReferenceInput(e.target.value)}
+                        placeholder="Enter reference number..."
+                        className="w-full px-4 sm:px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-gold/10 focus:border-gold focus:bg-white outline-none transition-all placeholder:text-slate-400"
+                      />
+                    </div>
                     <button
                       type="submit"
                       disabled={updatingRef || !referenceInput.trim() || referenceInput.trim() === selectedBatch.referenceNumber}
-                      className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors flex items-center justify-center min-w-[100px]"
+                      className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 disabled:opacity-30 disabled:shadow-none flex items-center justify-center min-w-[140px] active:scale-95"
                     >
-                      {updatingRef ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save'}
+                      {updatingRef ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Update Reference'}
                     </button>
-                  </div>
-                </form>
+                  </form>
+                </div>
 
-                <div>
-                  <h4 className="text-sm font-semibold text-slate-900 mb-3">Accounts in this batch</h4>
-                  <div className="bg-white border border-slate-200 rounded-xl overflow-hidden overflow-x-auto">
-                    <table className="w-full text-sm text-left whitespace-nowrap">
-                      <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
-                        <tr>
-                          <th className="px-4 py-3 font-medium w-16">#</th>
-                          <th className="px-4 py-3 font-medium">Account No</th>
-                          <th className="px-4 py-3 font-medium">Name</th>
-                          <th className="px-4 py-3 font-medium">Month Paid Upto</th>
-                          <th className="px-4 py-3 font-medium">Next Due Date</th>
-                          <th className="px-4 py-3 font-medium text-right">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {selectedBatch.accounts.map((acc, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50">
-                            <td className="px-4 py-2.5 text-slate-500 font-medium">{idx + 1}</td>
-                            <td className="px-4 py-2.5 font-mono text-slate-700">{acc.accountNo}</td>
-                            <td className="px-4 py-2.5 text-slate-700">{acc.accountName || '-'}</td>
-                            <td className="px-4 py-2.5 text-slate-700">{acc.monthPaidUpto || '-'}</td>
-                            <td className="px-4 py-2.5 text-slate-700">{acc.nextDueDate || '-'}</td>
-                            <td className="px-4 py-2.5 text-right font-medium text-slate-900">₹{acc.amount.toLocaleString('en-IN')}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {/* Account List */}
+                <div className="space-y-5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between px-2 gap-3">
+                    <h4 className="text-[11px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full bg-gold shadow-gold/20 shadow-lg" />
+                      Account Details
+                    </h4>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 px-3 py-1 rounded-full self-start sm:self-auto">
+                      {selectedBatch.accounts.length} Records
+                    </span>
                   </div>
+                  <div className="bg-white border border-slate-100 rounded-[2.5rem] overflow-hidden shadow-premium">
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full text-sm text-left whitespace-nowrap">
+                        <thead className="bg-slate-50/80 border-b border-slate-100 text-slate-500">
+                          <tr>
+                            <th className="px-8 py-5 font-black uppercase tracking-widest text-[9px] w-16">#</th>
+                            <th className="px-8 py-5 font-black uppercase tracking-widest text-[9px]">Account Number</th>
+                            <th className="px-8 py-5 font-black uppercase tracking-widest text-[9px]">Holder Name</th>
+                            <th className="px-8 py-5 font-black uppercase tracking-widest text-[9px]">Paid Upto</th>
+                            <th className="px-8 py-5 font-black uppercase tracking-widest text-[9px]">Next Due</th>
+                            <th className="px-8 py-5 font-black uppercase tracking-widest text-[9px] text-right">Amount</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {selectedBatch.accounts.map((acc, idx) => (
+                            <tr key={`${idx}-desktop`} className="hover:bg-gold/5 transition-all group/row cursor-default">
+                              <td className="px-8 py-5 text-slate-400 font-black text-[10px]">{String(idx + 1).padStart(2, '0')}</td>
+                              <td className="px-8 py-5 font-mono text-slate-900 font-black tracking-tight group-hover/row:text-brand transition-colors">{acc.accountNo}</td>
+                              <td className="px-8 py-5 text-slate-700 font-bold">{acc.accountName || '-'}</td>
+                              <td className="px-8 py-5">
+                                <span className="px-2.5 py-1 bg-info/10 text-info rounded-lg text-[9px] font-black uppercase tracking-widest border border-info/10">
+                                  {acc.monthPaidUpto || '-'}
+                                </span>
+                              </td>
+                              <td className="px-8 py-5">
+                                <span className="px-2.5 py-1 bg-amber-100/50 text-amber-700 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-200/50">
+                                  {acc.nextDueDate || '-'}
+                                </span>
+                              </td>
+                              <td className="px-8 py-5 text-right font-black text-success text-base group-hover/row:scale-105 transition-transform origin-right">
+                                ₹{acc.amount.toLocaleString('en-IN')}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden flex flex-col divide-y divide-slate-100">
+                      {selectedBatch.accounts.map((acc, idx) => (
+                        <div key={`${idx}-mobile`} className="p-4 hover:bg-slate-50 transition-colors">
+                          <div className="flex justify-between items-start mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-slate-400 font-black text-[10px]">{String(idx + 1).padStart(2, '0')}</span>
+                              <span className="font-mono text-slate-900 font-black tracking-tight">{acc.accountNo}</span>
+                            </div>
+                            <span className="font-black text-success text-base">₹{acc.amount.toLocaleString('en-IN')}</span>
+                          </div>
+                          <div className="text-slate-700 font-bold text-sm mb-3">{acc.accountName || 'No Name'}</div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="px-2 py-1 bg-info/10 text-info rounded-lg text-[9px] font-black uppercase tracking-widest border border-info/10">
+                              Paid: {acc.monthPaidUpto || '-'}
+                            </span>
+                            <span className="px-2 py-1 bg-amber-100/50 text-amber-700 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-200/50">
+                              Due: {acc.nextDueDate || '-'}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 sm:p-8 border-t border-slate-100 bg-white flex flex-col sm:flex-row items-center justify-between gap-4">
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="w-full sm:w-auto flex items-center justify-center gap-3 px-6 py-4 text-red-500 hover:bg-red-50 rounded-2xl transition-all text-[11px] font-black uppercase tracking-widest group order-2 sm:order-1"
+                >
+                  <Trash2 className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                  Delete Batch
+                </button>
+                <div className="w-full sm:w-auto flex gap-4 order-1 sm:order-2">
+                  <button
+                    onClick={() => { setSelectedBatch(null); setShowDeleteConfirm(false); }}
+                    className="w-full sm:w-auto px-10 py-4 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 active:scale-95"
+                  >
+                    Close Details
+                  </button>
                 </div>
               </div>
             </motion.div>

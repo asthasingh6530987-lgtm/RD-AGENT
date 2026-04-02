@@ -3,7 +3,7 @@ import { User } from 'firebase/auth';
 import { collection, getDocs, updateDoc, doc, deleteDoc, query, orderBy, where } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Users, FileText, Database, Loader2, ShieldCheck, User as UserIcon, Trash2, Eye, Calendar, X, IndianRupee, CheckCircle2, Clock, AlertCircle, RefreshCw, Download } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import ConfirmationModal from './ConfirmationModal';
 import Papa from 'papaparse';
 import { Account } from '../utils/batching';
@@ -303,7 +303,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
   return (
     <div className="space-y-8 font-sans">
       {/* Welcome & Header Section */}
-      <div className="relative overflow-hidden bg-white rounded-[2.5rem] p-8 sm:p-10 border border-slate-100 shadow-sm glass-card">
+      <div className="relative overflow-hidden bg-white rounded-[2.5rem] p-6 sm:p-10 border border-slate-100 shadow-sm glass-card">
         <div className="absolute top-0 right-0 w-64 h-64 bg-brand/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-gold/5 rounded-full -ml-32 -mb-32 blur-3xl"></div>
         
@@ -323,10 +323,10 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
             </p>
           </div>
           
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full md:w-auto">
             <button 
               onClick={() => window.location.reload()}
-              className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all hover-lift shadow-lg shadow-slate-900/10"
+              className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all hover-lift shadow-lg shadow-slate-900/10 w-full md:w-auto"
             >
               <RefreshCw className="w-5 h-5" />
               Refresh Data
@@ -341,13 +341,13 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm glass-card relative overflow-hidden group"
+          className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-premium glass-card relative overflow-hidden group hover:border-brand/20 transition-all"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Users className="w-16 h-16 text-brand" />
           </div>
-          <p className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">Total Agents</p>
-          <h3 className="text-5xl font-black text-slate-900 mb-4">{stats.totalUsers}</h3>
+          <p className="text-slate-600 font-bold text-sm uppercase tracking-wider mb-1">Total Agents</p>
+          <h3 className="text-5xl font-black text-info mb-4 group-hover:text-info transition-colors">{stats.totalUsers}</h3>
           <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm bg-emerald-50 w-fit px-3 py-1 rounded-full">
             <CheckCircle2 className="w-4 h-4" />
             Active System
@@ -358,14 +358,14 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm glass-card relative overflow-hidden group"
+          className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-premium glass-card relative overflow-hidden group hover:border-gold/20 transition-all"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <FileText className="w-16 h-16 text-brand" />
+            <FileText className="w-16 h-16 text-gold" />
           </div>
-          <p className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">Total Uploads</p>
-          <h3 className="text-5xl font-black text-slate-900 mb-4">{stats.totalUploads}</h3>
-          <div className="flex items-center gap-2 text-brand font-bold text-sm bg-brand/5 w-fit px-3 py-1 rounded-full">
+          <p className="text-slate-600 font-bold text-sm uppercase tracking-wider mb-1">Total Uploads</p>
+          <h3 className="text-5xl font-black text-success mb-4 group-hover:text-gold transition-colors">{stats.totalUploads}</h3>
+          <div className="flex items-center gap-2 text-gold font-bold text-sm bg-gold/5 w-fit px-3 py-1 rounded-full">
             <Database className="w-4 h-4" />
             Data Processed
           </div>
@@ -375,14 +375,14 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm glass-card relative overflow-hidden group sm:col-span-2 lg:col-span-1"
+          className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-premium glass-card relative overflow-hidden group sm:col-span-2 lg:col-span-1 hover:border-brand/20 transition-all"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Database className="w-16 h-16 text-brand" />
           </div>
-          <p className="text-slate-500 font-bold text-sm uppercase tracking-wider mb-1">Total Batches</p>
-          <h3 className="text-5xl font-black text-slate-900 mb-4">{stats.totalBatches}</h3>
-          <div className="flex items-center gap-2 text-gold font-bold text-sm bg-gold/5 w-fit px-3 py-1 rounded-full">
+          <p className="text-slate-600 font-bold text-sm uppercase tracking-wider mb-1">Total Batches</p>
+          <h3 className="text-5xl font-black text-info mb-4 group-hover:text-brand transition-colors">{stats.totalBatches}</h3>
+          <div className="flex items-center gap-2 text-brand font-bold text-sm bg-brand/5 w-fit px-3 py-1 rounded-full">
             <Clock className="w-4 h-4" />
             Batch History
           </div>
@@ -392,14 +392,12 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* User Management */}
         <div className="lg:col-span-5 space-y-6">
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8 glass-card">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center">
-                  <Users className="w-5 h-5 text-brand" />
-                </div>
-                Agents
-              </h3>
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-4 sm:p-8 glass-card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+              <div>
+                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Agents</h3>
+                <p className="text-slate-600 text-xs font-bold uppercase tracking-widest mt-1">Manage system access and permissions</p>
+              </div>
               <span className="text-xs font-bold text-slate-400 bg-slate-50 px-3 py-1 rounded-full border border-slate-100">
                 {users.length} Total
               </span>
@@ -426,8 +424,8 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
                     </button>
                   </div>
                   
-                  <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100">
-                    <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-slate-100">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${
                         (u.status || 'pending') === 'approved' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
                         (u.status || 'pending') === 'rejected' ? 'bg-brand/5 text-brand border-brand/10' :
@@ -473,39 +471,39 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
 
         {/* Upload Management */}
         <div className="lg:col-span-7 space-y-6">
-          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-8 glass-card">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-2xl font-black text-slate-900 flex items-center gap-3">
-                <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center">
+          <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-4 sm:p-8 glass-card">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-3">
+                <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center shrink-0">
                   <FileText className="w-5 h-5 text-brand" />
                 </div>
                 Recent Uploads
               </h3>
             </div>
             
-            <div className="overflow-x-auto -mx-8">
-              <table className="w-full text-left border-collapse">
+            <div className="hidden md:block overflow-x-auto -mx-4 sm:-mx-8 px-4 sm:px-8">
+              <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
-                  <tr className="border-b border-slate-50">
-                    <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest">File & Agent</th>
-                    <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Stats</th>
-                    <th className="py-4 px-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date</th>
-                    <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                  <tr className="border-b border-slate-100 bg-slate-50/80">
+                    <th className="py-4 px-4 sm:px-8 text-[10px] font-black text-slate-600 uppercase tracking-widest">File & Agent</th>
+                    <th className="py-4 px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest text-center">Stats</th>
+                    <th className="py-4 px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest">Date</th>
+                    <th className="py-4 px-4 sm:px-8 text-[10px] font-black text-slate-600 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {uploads.map((up) => {
                     const agent = users.find(u => u.id === up.agentId);
                     return (
-                      <tr key={up.id} className="group hover:bg-slate-50/50 transition-all duration-300">
-                        <td className="py-5 px-8">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 bg-white rounded-xl border border-slate-100 flex items-center justify-center text-slate-400 group-hover:text-brand transition-colors shadow-sm">
+                      <tr key={`${up.id}-desktop`} className="group hover:bg-slate-50/50 transition-all duration-300">
+                        <td className="py-4 sm:py-5 px-4 sm:px-8">
+                          <div className="flex items-center gap-3 sm:gap-4">
+                            <div className="w-10 h-10 bg-white rounded-xl border border-slate-100 flex items-center justify-center text-slate-500 group-hover:text-brand transition-colors shadow-sm shrink-0">
                               <FileText className="w-5 h-5" />
                             </div>
                             <div className="min-w-0">
                               <p className="font-bold text-slate-900 truncate group-hover:text-brand transition-colors">{up.filename}</p>
-                              <p className="text-xs text-slate-500 flex items-center gap-1">
+                              <p className="text-xs text-slate-600 flex items-center gap-1">
                                 <UserIcon className="w-3 h-3" />
                                 {agent?.name || 'Unknown Agent'}
                               </p>
@@ -514,37 +512,37 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
                         </td>
                         <td className="py-5 px-4">
                           <div className="flex flex-col items-center gap-1">
-                            <span className="font-mono text-slate-900 font-bold text-sm">₹{up.totalAmount?.toLocaleString()}</span>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter bg-slate-100 px-2 py-0.5 rounded-full">
+                            <span className="font-mono text-success font-black text-sm">₹{up.totalAmount?.toLocaleString()}</span>
+                            <span className="text-[10px] font-black text-slate-600 uppercase tracking-tighter bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                               {up.totalAccounts} Accounts
                             </span>
                           </div>
                         </td>
                         <td className="py-5 px-4">
-                          <div className="flex items-center gap-1.5 text-slate-500 text-xs font-medium">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                          <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold">
+                            <Calendar className="w-3.5 h-3.5 text-slate-600" />
                             {up.createdAt?.toDate ? up.createdAt.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'N/A'}
                           </div>
                         </td>
-                        <td className="py-5 px-8 text-right">
+                        <td className="py-4 sm:py-5 px-4 sm:px-8 text-right">
                           <div className="flex items-center justify-end gap-1">
                             <button
                               onClick={() => viewUploadDetails(up)}
-                              className="p-2.5 text-slate-400 hover:text-brand hover:bg-brand/5 rounded-xl transition-all"
+                              className="p-2.5 text-slate-500 hover:text-brand hover:bg-brand/5 rounded-xl transition-all"
                               title="View Details"
                             >
                               <Eye className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => handleDownloadUpload(up)}
-                              className="p-2.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                              className="p-2.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
                               title="Download CSV"
                             >
                               <Download className="w-5 h-5" />
                             </button>
                             <button
                               onClick={() => setDeleteTarget({ id: up.id, type: 'upload', name: up.filename })}
-                              className="p-2.5 text-slate-400 hover:text-brand hover:bg-brand/5 rounded-xl transition-all"
+                              className="p-2.5 text-slate-500 hover:text-brand hover:bg-brand/5 rounded-xl transition-all"
                               title="Delete Upload"
                             >
                               <Trash2 className="w-5 h-5" />
@@ -566,6 +564,75 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden flex flex-col divide-y divide-slate-100">
+              {uploads.map((up) => {
+                const agent = users.find(u => u.id === up.agentId);
+                return (
+                  <div key={`${up.id}-mobile`} className="p-4 hover:bg-slate-50 transition-colors">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white rounded-xl border border-slate-100 flex items-center justify-center text-slate-500 shadow-sm shrink-0">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 truncate">{up.filename}</p>
+                          <p className="text-xs text-slate-600 flex items-center gap-1">
+                            <UserIcon className="w-3 h-3" />
+                            {agent?.name || 'Unknown Agent'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-slate-600 text-xs font-bold whitespace-nowrap">
+                        <Calendar className="w-3.5 h-3.5 text-slate-600" />
+                        {up.createdAt?.toDate ? up.createdAt.toDate().toLocaleDateString('en-IN', { day: '2-digit', month: 'short' }) : 'N/A'}
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-4 bg-slate-50 p-3 rounded-2xl">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-mono text-success font-black text-sm">₹{up.totalAmount?.toLocaleString()}</span>
+                        <span className="text-[10px] font-black text-slate-600 uppercase tracking-tighter bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 w-fit">
+                          {up.totalAccounts} Accounts
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-end gap-1">
+                        <button
+                          onClick={() => viewUploadDetails(up)}
+                          className="p-2.5 text-slate-500 hover:text-brand hover:bg-brand/5 rounded-xl transition-all"
+                          title="View Details"
+                        >
+                          <Eye className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDownloadUpload(up)}
+                          className="p-2.5 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-all"
+                          title="Download CSV"
+                        >
+                          <Download className="w-5 h-5" />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget({ id: up.id, type: 'upload', name: up.filename })}
+                          className="p-2.5 text-slate-500 hover:text-brand hover:bg-brand/5 rounded-xl transition-all"
+                          title="Delete Upload"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              {uploads.length === 0 && (
+                <div className="py-12 text-center">
+                  <div className="flex flex-col items-center gap-2 text-slate-400">
+                    <Database className="w-12 h-12 opacity-20" />
+                    <p className="font-medium italic">No uploads found in the system.</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -593,59 +660,59 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="bg-white rounded-[2.5rem] shadow-2xl border border-slate-200 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col relative"
+              className="bg-white rounded-[2.5rem] shadow-premium border border-slate-200 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col relative"
             >
-              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand via-gold to-brand"></div>
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-brand"></div>
               
-              <div className="p-8 sm:p-10 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-slate-50/30">
-                <div>
+              <div className="p-6 sm:p-10 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-slate-50/30">
+                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center text-brand">
+                    <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center text-brand shrink-0 shadow-premium">
                       <FileText className="w-6 h-6" />
                     </div>
-                    <h3 className="text-3xl font-black text-slate-900 tracking-tight">{selectedUpload.filename}</h3>
+                    <h3 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight truncate">{selectedUpload.filename}</h3>
                   </div>
-                  <p className="text-slate-500 font-medium flex items-center gap-2">
-                    <UserIcon className="w-4 h-4" />
-                    Uploaded by <span className="text-slate-900 font-bold">{users.find(u => u.id === selectedUpload.agentId)?.name || 'Unknown Agent'}</span>
-                    <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                    <Calendar className="w-4 h-4" />
-                    {selectedUpload.createdAt?.toDate ? selectedUpload.createdAt.toDate().toLocaleString() : 'N/A'}
-                  </p>
+                  <div className="text-slate-500 font-medium flex flex-wrap items-center gap-2 text-sm">
+                    <UserIcon className="w-4 h-4 shrink-0" />
+                    <span className="truncate">Uploaded by <span className="text-brand font-black">{users.find(u => u.id === selectedUpload.agentId)?.name || 'Unknown Agent'}</span></span>
+                    <span className="hidden sm:inline-block w-1 h-1 rounded-full bg-slate-300"></span>
+                    <Calendar className="w-4 h-4 shrink-0" />
+                    <span className="whitespace-nowrap">{selectedUpload.createdAt?.toDate ? selectedUpload.createdAt.toDate().toLocaleString() : 'N/A'}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 sm:w-auto w-full">
                   <button
                     onClick={() => handleDownloadUpload(selectedUpload)}
-                    className="flex items-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl hover:bg-brand-dark transition-all shadow-xl shadow-brand/20 font-bold hover-lift"
+                    className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-brand text-white rounded-2xl hover:bg-brand/90 transition-all shadow-xl shadow-brand/20 font-black uppercase tracking-widest text-xs hover-lift whitespace-nowrap"
                   >
-                    <Download className="w-5 h-5" />
-                    Download Export
+                    <Download className="w-5 h-5 shrink-0" />
+                    Download
                   </button>
                   <button
                     onClick={() => setSelectedUpload(null)}
-                    className="p-3 hover:bg-slate-200 rounded-2xl transition-colors text-slate-500"
+                    className="p-3 hover:bg-slate-200 rounded-2xl transition-colors text-slate-500 shrink-0 bg-slate-100 sm:bg-transparent"
                   >
                     <X className="w-6 h-6" />
                   </button>
                 </div>
               </div>
 
-              <div className="p-8 sm:p-10 overflow-y-auto flex-1 custom-scrollbar">
+              <div className="p-6 sm:p-10 overflow-y-auto flex-1 custom-scrollbar">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
-                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm glass-card">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Amount</p>
-                    <p className="text-3xl font-black text-slate-900 flex items-center gap-1">
+                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-premium glass-card group hover:border-brand/20 transition-all">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Amount</p>
+                    <p className="text-3xl font-black text-success flex items-center gap-1 group-hover:text-success transition-colors">
                       <IndianRupee className="w-6 h-6 text-brand" />
                       {selectedUpload.totalAmount?.toLocaleString()}
                     </p>
                   </div>
-                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm glass-card">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Accounts</p>
-                    <p className="text-3xl font-black text-slate-900">{selectedUpload.totalAccounts}</p>
+                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-premium glass-card group hover:border-gold/20 transition-all">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Accounts</p>
+                    <p className="text-3xl font-black text-slate-900 group-hover:text-gold transition-colors">{selectedUpload.totalAccounts}</p>
                   </div>
-                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm glass-card">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Total Batches</p>
-                    <p className="text-3xl font-black text-slate-900">{uploadBatches.length}</p>
+                  <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-premium glass-card group hover:border-brand/20 transition-all">
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Total Batches</p>
+                    <p className="text-3xl font-black text-slate-900 group-hover:text-brand transition-colors">{uploadBatches.length}</p>
                   </div>
                 </div>
 
@@ -664,20 +731,20 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {uploadBatches.map((batch) => (
-                      <div key={batch.id} className="group flex items-center justify-between p-5 bg-slate-50/50 rounded-[1.5rem] border border-slate-100 hover:border-brand/20 hover:bg-white transition-all duration-300">
+                      <div key={batch.id} className="group flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 bg-slate-50/50 rounded-[1.5rem] border border-slate-100 hover:border-brand/20 hover:bg-white transition-all duration-300">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-white rounded-2xl border border-slate-100 flex items-center justify-center font-black text-slate-400 group-hover:text-brand group-hover:border-brand/20 transition-all shadow-sm">
+                          <div className="w-12 h-12 bg-white rounded-2xl border border-slate-100 flex items-center justify-center font-black text-slate-400 group-hover:text-brand group-hover:border-brand/20 transition-all shadow-sm shrink-0">
                             #{batch.batchNumber}
                           </div>
                           <div>
-                            <p className="font-black text-slate-900 flex items-center gap-1 text-lg">
-                              <IndianRupee className="w-4 h-4 text-brand" />
-                              {batch.totalAmount.toLocaleString()}
+                            <p className="font-black text-success flex items-center gap-1 text-lg">
+                              <IndianRupee className="w-4 h-4 text-brand shrink-0" />
+                              <span className="truncate">{batch.totalAmount.toLocaleString()}</span>
                             </p>
                             <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">{batch.accountCount} Accounts</p>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
+                        <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center gap-2 w-full sm:w-auto border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 mt-1 sm:mt-0">
                           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${getStatusColor(batch.status)}`}>
                             {getStatusIcon(batch.status)}
                             <span>{batch.status}</span>
