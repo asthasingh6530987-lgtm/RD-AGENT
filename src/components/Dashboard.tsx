@@ -10,6 +10,13 @@ import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, IndianRupee, Cloc
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmationModal from './ConfirmationModal';
 
+export const getMillis = (createdAt: any) => {
+  if (!createdAt) return 0;
+  if (typeof createdAt.toMillis === 'function') return createdAt.toMillis();
+  if (createdAt.seconds) return createdAt.seconds * 1000;
+  return 0;
+};
+
 interface DashboardProps {
   user: User;
   addToast?: (message: string, type: 'success' | 'error' | 'info') => void;
@@ -97,6 +104,17 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
 
   // Fetch batches
   useEffect(() => {
+    // Check local cache first
+    const cachedBatches = localStorage.getItem(`saved_batches_${user.uid}`);
+    if (cachedBatches) {
+      try {
+        setSavedBatches(JSON.parse(cachedBatches));
+        setLoadingBatches(false); // Stop loading early
+      } catch (e) {
+        console.error("Local storage error:", e);
+      }
+    }
+
     const q = query(
       collection(db, 'batches'),
       where('agentId', '==', user.uid),
@@ -110,6 +128,7 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
       })) as SavedBatch[];
       setSavedBatches(batchesData);
       setLoadingBatches(false);
+      localStorage.setItem(`saved_batches_${user.uid}`, JSON.stringify(batchesData));
     }, (err) => {
       console.error("Error fetching batches:", err);
       setError("Failed to load your batches. Please check your permissions.");
@@ -664,7 +683,9 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
     });
 
     if (sortOption === 'date') {
-      filtered.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+      filtered.sort((a, b) => {
+        return getMillis(b.createdAt) - getMillis(a.createdAt);
+      });
     } else if (sortOption === 'status') {
       filtered.sort((a, b) => a.status.localeCompare(b.status));
     } else if (sortOption === 'amount') {
@@ -1100,11 +1121,11 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                         <td className="px-10 py-10">
                           <div className="flex flex-col">
                             <span className="text-base font-black text-slate-900 tracking-tight group-hover:text-brand transition-colors">
-                              {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
+                              {getMillis(batch.createdAt) ? new Date(getMillis(batch.createdAt)).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
                             </span>
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
                               <Clock className="w-3 h-3" />
-                              {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                              {getMillis(batch.createdAt) ? new Date(getMillis(batch.createdAt)).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
                             </span>
                           </div>
                         </td>
@@ -1189,11 +1210,11 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <span className="text-sm font-black text-slate-900 tracking-tight">
-                          {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
+                          {getMillis(batch.createdAt) ? new Date(getMillis(batch.createdAt)).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
                         </span>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          {getMillis(batch.createdAt) ? new Date(getMillis(batch.createdAt)).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                       </div>
                       <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-widest shadow-sm ${getStatusColor(batch.status)}`}>

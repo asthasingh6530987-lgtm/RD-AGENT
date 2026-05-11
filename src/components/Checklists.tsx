@@ -80,6 +80,17 @@ export default function Checklists({ userId, addToast }: ChecklistsProps) {
   const [editAccountsText, setEditAccountsText] = useState('');
 
   useEffect(() => {
+    // Check local cache first
+    const cachedChecklists = localStorage.getItem(`checklists_${userId}`);
+    if (cachedChecklists) {
+      try {
+        setChecklists(JSON.parse(cachedChecklists));
+        setLoading(false); // Stop loading early
+      } catch (e) {
+        console.error("Local storage error:", e);
+      }
+    }
+
     const q = query(
       collection(db, 'checklists'),
       where('userId', '==', userId)
@@ -92,13 +103,14 @@ export default function Checklists({ userId, addToast }: ChecklistsProps) {
       });
       // Sort in memory to avoid composite index reqs
       results.sort((a, b) => {
-        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : 0;
-        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
+        const timeA = a.updatedAt ? (typeof a.updatedAt.toMillis === 'function' ? a.updatedAt.toMillis() : (a.updatedAt.seconds ? a.updatedAt.seconds * 1000 : 0)) : 0;
+        const timeB = b.updatedAt ? (typeof b.updatedAt.toMillis === 'function' ? b.updatedAt.toMillis() : (b.updatedAt.seconds ? b.updatedAt.seconds * 1000 : 0)) : 0;
         return timeB - timeA;
       });
       
       setChecklists(results);
       setLoading(false);
+      localStorage.setItem(`checklists_${userId}`, JSON.stringify(results));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'checklists');
       addToast('Failed to load checklists', 'error');
@@ -114,7 +126,19 @@ export default function Checklists({ userId, addToast }: ChecklistsProps) {
       return;
     }
 
-    setLoadingTasks(true);
+    // Check local cache first
+    const cachedTasks = localStorage.getItem(`task_blocks_${activeChecklist.id}_${userId}`);
+    if (cachedTasks) {
+      try {
+        setTaskBlocks(JSON.parse(cachedTasks));
+        setLoadingTasks(false); // Stop loading early
+      } catch (e) {
+        console.error("Local storage error:", e);
+      }
+    } else {
+      setLoadingTasks(true);
+    }
+
     const q = query(
       collection(db, 'task_blocks'),
       where('checklistId', '==', activeChecklist.id),
@@ -131,6 +155,7 @@ export default function Checklists({ userId, addToast }: ChecklistsProps) {
       
       setTaskBlocks(results);
       setLoadingTasks(false);
+      localStorage.setItem(`task_blocks_${activeChecklist.id}_${userId}`, JSON.stringify(results));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'task_blocks');
       addToast('Failed to load tasks', 'error');
@@ -138,7 +163,7 @@ export default function Checklists({ userId, addToast }: ChecklistsProps) {
     });
 
     return () => unsubscribe();
-  }, [activeChecklist, addToast]);
+  }, [activeChecklist, userId, addToast]);
 
   const handleCreateChecklist = async () => {
     if (!newTitle.trim() || !newRawData.trim()) {

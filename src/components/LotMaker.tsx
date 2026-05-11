@@ -110,13 +110,35 @@ export default function LotMaker({ userId, addToast }: { userId: string, addToas
     fetchCustomers();
   }, [userId]);
 
+  useEffect(() => {
+    if (customers.length > 0) {
+      localStorage.setItem(`lot_customers_${userId}`, JSON.stringify(customers));
+    } else if (!loading) {
+      localStorage.removeItem(`lot_customers_${userId}`);
+    }
+  }, [customers, userId, loading]);
+
   const fetchCustomers = async () => {
     setLoading(true);
+    
+    // Check local cache first
+    const cachedData = localStorage.getItem(`lot_customers_${userId}`);
+    if (cachedData) {
+      try {
+        setCustomers(JSON.parse(cachedData));
+        setLoading(false); // Stop loading early if we have cached data
+      } catch (e) {
+        console.error("Local storage parse error:", e);
+      }
+    }
+
     try {
       const q = query(collection(db, 'lot_customers'), where('userId', '==', userId));
       const querySnapshot = await getDocs(q);
       const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LotCustomer));
       setCustomers(data);
+      // Update cache
+      localStorage.setItem(`lot_customers_${userId}`, JSON.stringify(data));
     } catch (error) {
       console.error("Error fetching customers:", error);
       addToast("Failed to load customer list", "error");
