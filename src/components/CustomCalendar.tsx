@@ -68,6 +68,7 @@ export default function CustomCalendar({ selectedDate, onSelectDate, highlighted
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            key="calendar-popover"
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}

@@ -7,16 +7,51 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <link rel="manifest" href="/manifest.json" />
-    <link rel="apple-touch-icon" href="https://picsum.photos/seed/post/192/192" />
-    <title>RD Agent Portal</title>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('SW registered'))
-            .catch(err => console.log('SW registration failed', err));
-        });
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <title>RD Agent Portal | India Post Agent Tools & Calculators</title>
+    <meta name="description" content="RD Agent Portal is the ultimate platform for India Post Agents. Access modern RD account management, CSV conversion, lot making, and multi-function Post Office finance calculators." />
+    <meta name="keywords" content="RD Agent Portal, India Post, RD Agent, Post Office Agent, PRAS Portal, RD Calculator, MIS Calculator, Post Office Savings Schemes, Agent Login PRAS, India Post Postar, Postal Agent Tools" />
+    <meta name="author" content="RD Agent Portal" />
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://rd-agent.netlify.app/" />
+    <meta property="og:site_name" content="RD Agent Portal" />
+    <meta property="og:title" content="RD Agent Portal | India Post Agent Tools & Calculators" />
+    <meta property="og:description" content="RD Agent Portal is the ultimate platform for India Post Agents. Access modern RD account management, CSV conversion, lot making, and multi-function Post Office finance calculators." />
+    <meta property="og:image" content="/android-chrome-512x512.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://rd-agent.netlify.app/" />
+    <meta property="twitter:title" content="RD Agent Portal | India Post Agent Tools & Calculators" />
+    <meta property="twitter:description" content="RD Agent Portal is the ultimate platform for India Post Agents. Access modern RD account management, CSV conversion, lot making, and multi-function Post Office finance calculators." />
+    <meta property="twitter:image" content="/android-chrome-512x512.png" />
+
+    <meta name="google-site-verification" content="j4C1Tz3BMajokC-1zZKsN_5c1ow4Q-WLonvfDSdZNBQ" />
+    <link rel="canonical" href="https://rd-agent.netlify.app/" />
+
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "RD Agent Portal",
+        "alternateName": "India Post RD Agent Portal",
+        "url": "https://rd-agent.netlify.app/",
+        "description": "RD Agent Portal is the ultimate platform for India Post Agents. Access modern RD account management, CSV conversion, lot making, and multi-function Post Office finance calculators.",
+        "applicationCategory": "FinanceApplication",
+        "operatingSystem": "All",
+        "author": {
+          "@type": "Organization",
+          "name": "RD Agent Portal"
+        }
       }
     </script>
   </head>

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rd-agent.netlify.app/sitemap.xml

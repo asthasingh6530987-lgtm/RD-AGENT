@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { collection, getDocs, updateDoc, doc, deleteDoc, query, orderBy, where } from 'firebase/firestore';
-import { auth, db } from '../firebase';
-import { Users, FileText, Database, Loader2, ShieldCheck, User as UserIcon, Trash2, Eye, Calendar, X, IndianRupee, CheckCircle2, Clock, AlertCircle, RefreshCw, Download } from 'lucide-react';
+import { db } from '../firebase';
+import { collection, getDocs, updateDoc, doc, deleteDoc, query, orderBy, where, serverTimestamp } from 'firebase/firestore';
+import { auth } from '../firebase';
+import { Bell, Send, Users, FileText, Database, Loader2, ShieldCheck, User as UserIcon, Trash2, Eye, Calendar, X, IndianRupee, CheckCircle2, Clock, AlertCircle, RefreshCw, Download, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmationModal from './ConfirmationModal';
 import Papa from 'papaparse';
@@ -107,6 +108,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
   const [selectedUpload, setSelectedUpload] = useState<UploadData | null>(null);
   const [uploadBatches, setUploadBatches] = useState<BatchData[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'uploads'>('users');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -389,9 +391,29 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
         </motion.div>
       </div>
       
+      {/* Mobile Tab Switcher */}
+      <div className="lg:hidden flex bg-white rounded-2xl p-2 border border-slate-100 shadow-sm gap-2">
+        <button
+          onClick={() => setActiveAdminTab('users')}
+          className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+            activeAdminTab === 'users' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
+          }`}
+        >
+          Agents
+        </button>
+        <button
+          onClick={() => setActiveAdminTab('uploads')}
+          className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+            activeAdminTab === 'uploads' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
+          }`}
+        >
+          Uploads
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* User Management */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className={`lg:col-span-5 space-y-6 ${activeAdminTab !== 'users' ? 'hidden lg:block' : ''}`}>
           <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-4 sm:p-8 glass-card">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
               <div>
@@ -403,7 +425,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
               </span>
             </div>
             
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar pr-2">
               {users.map((u) => (
                 <div key={u.id} className="group p-5 bg-slate-50/50 rounded-2xl border border-slate-100 hover:border-brand/20 hover:bg-white transition-all duration-300">
                   <div className="flex items-center justify-between mb-4">
@@ -470,7 +492,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
         </div>
 
         {/* Upload Management */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className={`lg:col-span-7 space-y-6 ${activeAdminTab !== 'uploads' ? 'hidden lg:block' : ''}`}>
           <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-4 sm:p-8 glass-card">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
               <h3 className="text-xl sm:text-2xl font-black text-slate-900 flex items-center gap-3">
@@ -481,7 +503,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
               </h3>
             </div>
             
-            <div className="hidden md:block overflow-x-auto -mx-4 sm:-mx-8 px-4 sm:px-8">
+            <div className="hidden md:block overflow-x-auto -mx-4 sm:-mx-8 px-4 sm:px-8 max-h-[600px] overflow-y-auto custom-scrollbar">
               <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/80">
@@ -567,7 +589,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
             </div>
 
             {/* Mobile Card View */}
-            <div className="md:hidden flex flex-col divide-y divide-slate-100">
+            <div className="md:hidden flex flex-col divide-y divide-slate-100 max-h-[600px] overflow-y-auto custom-scrollbar">
               {uploads.map((up) => {
                 const agent = users.find(u => u.id === up.agentId);
                 return (
@@ -655,7 +677,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
 
       <AnimatePresence>
         {selectedUpload && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+          <div key="admin-upload-modal-backdrop" className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

@@ -58,7 +58,29 @@ export default class ErrorBoundary extends Component<Props, State> {
                 <div className="w-full bg-slate-50 border-2 border-slate-100 p-6 rounded-2xl text-left mb-10 overflow-hidden">
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Error Details</p>
                   <div className="text-xs text-red-600 font-black font-mono break-all leading-relaxed">
-                    {this.state.error}
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(this.state.error);
+                        if (parsed.error && parsed.operationType) {
+                          return (
+                            <div className="space-y-2">
+                              <p className="text-slate-900 font-bold uppercase tracking-widest text-[9px]">Operation: {parsed.operationType}</p>
+                              <p className="text-slate-900 font-bold uppercase tracking-widest text-[9px]">Path: {parsed.path || 'N/A'}</p>
+                              <p className="mt-2 text-red-600">{parsed.error}</p>
+                              {parsed.error.includes('permission-denied') && (
+                                <p className="mt-4 text-slate-500 font-sans normal-case text-[11px]">
+                                  This usually means your account doesn't have the required permissions. 
+                                  If you are an admin, please ensure your role is correctly set in the system.
+                                </p>
+                              )}
+                            </div>
+                          );
+                        }
+                      } catch (e) {
+                        // Not a JSON error, just show the string
+                      }
+                      return this.state.error;
+                    })()}
                   </div>
                 </div>
               )}

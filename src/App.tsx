@@ -1,3 +1,4 @@
+// Trigger re-build for Shared URL update
 import { useEffect, useState, useCallback } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -6,10 +7,13 @@ import Dashboard from './components/Dashboard';
 import Converter from './components/Converter';
 import AdminDashboard from './components/AdminDashboard';
 import CollectionTracker from './components/CollectionTracker';
+import FinanceCalculator from './components/FinanceCalculator';
+import LotMaker from './components/LotMaker';
+import Checklists from './components/Checklists';
 import ErrorBoundary from './components/ErrorBoundary';
 import ConfirmationModal from './components/ConfirmationModal';
-import { LogIn, Loader2, LayoutDashboard, FileType, Building2, ShieldCheck, Zap, LogOut, ShieldAlert, X, CheckCircle2, AlertCircle, Info, Wallet } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { LogIn, Loader2, LayoutDashboard, FileType, Building2, ShieldCheck, Zap, LogOut, ShieldAlert, X, CheckCircle2, AlertCircle, Info, Wallet, Calculator, Globe, Table as TableIcon, ListChecks, CheckSquare } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface Toast {
   id: string;
@@ -21,7 +25,24 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<'agent' | 'admin' | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'converter' | 'admin' | 'collections'>('dashboard');
+  const [currentView, setCurrentView] = useState<'dashboard' | 'converter' | 'admin' | 'collections' | 'calculators' | 'lotmaker' | 'checklists'>(() => {
+    const saved = localStorage.getItem('rd_portal_current_view');
+    return (saved as any) || 'dashboard';
+  });
+
+  useEffect(() => {
+    const handleNavigate = (e: any) => {
+      if (e.detail && typeof e.detail === 'string') {
+         setCurrentView(e.detail as any);
+      }
+    };
+    window.addEventListener('navigate', handleNavigate);
+    return () => window.removeEventListener('navigate', handleNavigate);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('rd_portal_current_view', currentView);
+  }, [currentView]);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -52,7 +73,9 @@ export default function App() {
           if (userDoc.exists()) {
             userRole = userDoc.data().role || 'agent';
             // If they are the default admin, ensure role is admin
-            if (currentUser.email === 'asthasingh6530987@gmail.com' && currentUser.emailVerified && userRole !== 'admin') {
+            // Default admin check - ensure the primary admin always has the correct role
+            // Rebuild trigger: removing any legacy GitHub references from shared URL
+            if (currentUser.email === 'asthasingh6530987@gmail.com' && userRole !== 'admin') {
               userRole = 'admin';
               await updateDoc(userDocRef, { role: 'admin' });
             }
@@ -120,7 +143,7 @@ export default function App() {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [loginMode]);
 
   if (loading) {
     return (
@@ -336,6 +359,7 @@ export default function App() {
                 <AnimatePresence>
                   {loginError && (
                     <motion.div
+                      key="login-error"
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
@@ -406,12 +430,20 @@ export default function App() {
               </motion.div>
             )}
 
-            <div className="mt-16 text-center border-t border-slate-100 pt-8">
+            <div className="mt-16 text-center border-t border-slate-100 pt-8 flex flex-col gap-4">
               <p className={`text-[10px] uppercase tracking-[0.3em] font-black transition-colors duration-500 ${
                 loginMode === 'admin' ? 'text-admin/40' : loginMode === 'agent' ? 'text-brand/40' : 'text-slate-300'
               }`}>
                 Official Department of Post Portal
               </p>
+              <a 
+                href="https://rd-agent.netlify.app" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-[10px] font-black text-slate-400 hover:text-brand transition-colors flex items-center justify-center gap-2 group"
+              >
+                WEB: <span className="group-hover:underline">rd-agent.netlify.app</span>
+              </a>
             </div>
           </div>
         </div>
@@ -476,6 +508,16 @@ export default function App() {
                 </div>
               </div>
               <div className="h-10 w-px bg-slate-200 hidden sm:block" />
+              <a
+                href="https://rd-agent.netlify.app"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden lg:flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 rounded-xl transition-all border border-slate-100 group"
+                title="Visit Live Site"
+              >
+                <Globe className="w-4 h-4 text-slate-400 group-hover:text-brand transition-colors" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover:text-slate-900">Live Site</span>
+              </a>
               <button
                 onClick={() => setShowLogoutConfirm(true)}
                 className="p-3 text-slate-400 hover:text-brand hover:bg-brand/5 rounded-2xl transition-all duration-300 hover:rotate-12"
@@ -524,6 +566,28 @@ export default function App() {
               Collections
             </button>
             <button
+              onClick={() => setCurrentView('calculators')}
+              className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center gap-3 group ${
+                currentView === 'calculators' 
+                  ? 'bg-slate-900 text-white shadow-premium-hover' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-brand'
+              }`}
+            >
+              <Calculator className={`w-4 h-4 transition-colors ${currentView === 'calculators' ? 'text-brand' : 'group-hover:text-brand'}`} />
+              Calculators
+            </button>
+            <button
+              onClick={() => setCurrentView('lotmaker')}
+              className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center gap-3 group ${
+                currentView === 'lotmaker' 
+                  ? 'bg-slate-900 text-white shadow-premium-hover' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-brand'
+              }`}
+            >
+              <ListChecks className={`w-4 h-4 transition-colors ${currentView === 'lotmaker' ? 'text-brand' : 'group-hover:text-brand'}`} />
+              Lot Maker
+            </button>
+            <button
               onClick={() => setCurrentView('converter')}
               className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center gap-3 group ${
                 currentView === 'converter' 
@@ -534,15 +598,26 @@ export default function App() {
               <FileType className={`w-4 h-4 transition-colors ${currentView === 'converter' ? 'text-brand' : 'group-hover:text-brand'}`} />
               Converter
             </button>
+            <button
+              onClick={() => setCurrentView('checklists')}
+              className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center gap-3 group ${
+                currentView === 'checklists' 
+                  ? 'bg-slate-900 text-white shadow-premium-hover' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-brand'
+              }`}
+            >
+              <CheckSquare className={`w-4 h-4 transition-colors ${currentView === 'checklists' ? 'text-brand' : 'group-hover:text-brand'}`} />
+              Lot Checklists
+            </button>
           </div>
         </div>
       </nav>
 
       {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-2xl border-t border-slate-100 z-50 px-8 py-4 flex items-center justify-between shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-[calc(16px+env(safe-area-inset-bottom))] no-select">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-2xl border-t border-slate-100 z-50 px-4 py-4 flex items-center justify-start gap-4 overflow-x-auto shadow-[0_-8px_30px_rgba(0,0,0,0.08)] pb-[calc(16px+env(safe-area-inset-bottom))] no-select custom-scrollbar">
         <button
           onClick={() => setCurrentView('dashboard')}
-          className={`flex flex-col items-center gap-2 transition-all duration-500 ${
+          className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-500 min-w-[4rem] ${
             currentView === 'dashboard' ? 'text-brand scale-110' : 'text-slate-300 hover:text-brand/50'
           }`}
         >
@@ -554,7 +629,7 @@ export default function App() {
         
         <button
           onClick={() => setCurrentView('collections')}
-          className={`flex flex-col items-center gap-2 transition-all duration-500 ${
+          className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-500 min-w-[4rem] ${
             currentView === 'collections' ? 'text-brand scale-110' : 'text-slate-300 hover:text-brand/50'
           }`}
         >
@@ -565,8 +640,32 @@ export default function App() {
         </button>
 
         <button
+          onClick={() => setCurrentView('calculators')}
+          className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-500 min-w-[4rem] ${
+            currentView === 'calculators' ? 'text-brand scale-110' : 'text-slate-300 hover:text-brand/50'
+          }`}
+        >
+          <div className={`p-2.5 rounded-2xl transition-all duration-500 ${currentView === 'calculators' ? 'bg-brand/10 shadow-brand' : ''}`}>
+            <Calculator className="w-7 h-7" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Calc</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentView('lotmaker')}
+          className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-500 min-w-[4rem] ${
+            currentView === 'lotmaker' ? 'text-brand scale-110' : 'text-slate-300 hover:text-brand/50'
+          }`}
+        >
+          <div className={`p-2.5 rounded-2xl transition-all duration-500 ${currentView === 'lotmaker' ? 'bg-brand/10 shadow-brand' : ''}`}>
+            <ListChecks className="w-7 h-7" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Lots</span>
+        </button>
+        
+        <button
           onClick={() => setCurrentView('converter')}
-          className={`flex flex-col items-center gap-2 transition-all duration-500 ${
+          className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-500 min-w-[4rem] ${
             currentView === 'converter' ? 'text-brand scale-110' : 'text-slate-300 hover:text-brand/50'
           }`}
         >
@@ -576,10 +675,22 @@ export default function App() {
           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Convert</span>
         </button>
 
+        <button
+          onClick={() => setCurrentView('checklists')}
+          className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-500 min-w-[4rem] ${
+            currentView === 'checklists' ? 'text-brand scale-110' : 'text-slate-300 hover:text-brand/50'
+          }`}
+        >
+          <div className={`p-2.5 rounded-2xl transition-all duration-500 ${currentView === 'checklists' ? 'bg-brand/10 shadow-brand' : ''}`}>
+            <CheckSquare className="w-7 h-7" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Lot Checklists</span>
+        </button>
+
         {role === 'admin' && (
           <button
             onClick={() => setCurrentView('admin')}
-            className={`flex flex-col items-center gap-2 transition-all duration-500 ${
+            className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-500 min-w-[4rem] ${
               currentView === 'admin' ? 'text-admin scale-110' : 'text-slate-300 hover:text-admin/50'
             }`}
           >
@@ -601,23 +712,31 @@ export default function App() {
         </button>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-        <motion.div
-          key={currentView}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
-        >
-          {currentView === 'admin' ? (
-            <AdminDashboard user={user} addToast={addToast} />
-          ) : currentView === 'dashboard' ? (
-            <Dashboard user={user} addToast={addToast} />
-          ) : currentView === 'collections' ? (
-            <CollectionTracker user={user} addToast={addToast} />
-          ) : (
-            <Converter />
-          )}
-        </motion.div>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 pb-32 md:pb-12">
+        <ErrorBoundary>
+          <motion.div
+            key={currentView}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
+          >
+            {currentView === 'admin' ? (
+              <AdminDashboard user={user} addToast={addToast} />
+            ) : currentView === 'dashboard' ? (
+              <Dashboard user={user} addToast={addToast} />
+            ) : currentView === 'collections' ? (
+              <CollectionTracker user={user} addToast={addToast} />
+            ) : currentView === 'calculators' ? (
+              <FinanceCalculator />
+            ) : currentView === 'lotmaker' ? (
+              <LotMaker userId={user.uid} addToast={addToast} />
+            ) : currentView === 'checklists' ? (
+              <Checklists userId={user.uid} addToast={addToast} />
+            ) : (
+              <Converter />
+            )}
+          </motion.div>
+        </ErrorBoundary>
       </main>
 
       <ConfirmationModal

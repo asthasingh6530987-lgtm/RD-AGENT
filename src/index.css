@@ -33,6 +33,7 @@
   --shadow-inner-light: inset 0 2px 4px 0 rgba(255, 255, 255, 0.06);
   --shadow-brand: 0 10px 25px -5px rgba(220, 38, 38, 0.15);
   --shadow-gold: 0 10px 25px -5px rgba(251, 191, 36, 0.15);
+  --shadow-admin: 0 10px 25px -5px rgba(79, 70, 229, 0.15);
   
   /* Gradients */
   --gradient-brand: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
@@ -53,6 +54,10 @@
 
 @utility shadow-gold {
   box-shadow: var(--shadow-gold);
+}
+
+@utility shadow-admin {
+  box-shadow: var(--shadow-admin);
 }
 
 @utility bg-gradient-success {

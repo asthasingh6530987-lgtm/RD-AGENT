@@ -3,8 +3,10 @@ import { User } from 'firebase/auth';
 import { collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp, doc, setDoc, getDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import Papa from 'papaparse';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { createBatches, Account, Batch } from '../utils/batching';
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, IndianRupee, Clock, RefreshCw, X, Trash2, Download, ChevronLeft, ChevronRight, Search, ArrowUpDown } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, IndianRupee, Clock, RefreshCw, X, Trash2, Download, ChevronLeft, ChevronRight, Search, ArrowUpDown, FileDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmationModal from './ConfirmationModal';
 
@@ -358,11 +360,9 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
     }
   };
 
-  const handleExportBatch = (format: 'detailed' | 'portal' | 'summary' = 'detailed') => {
-    if (!selectedBatch) return;
-
+  const handleExportBatch = (batch: SavedBatch, format: 'detailed' | 'portal' | 'summary' = 'detailed') => {
     const csvData: any[] = [];
-    selectedBatch.accounts.forEach(acc => {
+    batch.accounts.forEach(acc => {
       if (format === 'portal' || format === 'summary') {
         csvData.push({
           'Account No': acc.accountNo,
@@ -385,12 +385,12 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
         'Account Name': '',
         'Month Paid Upto': '',
         'Next RD Installment Due Date': '',
-        'Amount': selectedBatch.totalAmount
+        'Amount': batch.totalAmount
       });
     } else if (format === 'summary') {
       csvData.push({
         'Account No': 'TOTAL BATCH AMOUNT',
-        'Amount': selectedBatch.totalAmount
+        'Amount': batch.totalAmount
       });
     }
 
@@ -399,11 +399,159 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `batch_${selectedBatch.referenceNumber || selectedBatch.id}${format === 'portal' ? '_portal' : ''}.csv`);
+    link.setAttribute('download', `batch_${batch.referenceNumber || batch.id.slice(-12)}${format === 'portal' ? '_portal' : ''}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleExportBatchPDF = (batch: SavedBatch) => {
+    const doc = new jsPDF();
+    const batchIdentifier = batch.referenceNumber || batch.id.slice(-12);
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(220, 38, 38); // brand color
+    doc.text('RD AGENT BATCH REPORT', 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, 14, 28);
+    
+    // Batch Info Box
+    doc.setDrawColor(241, 245, 249); // slate-100
+    doc.setFillColor(248, 250, 252); // slate-50
+    doc.rect(14, 35, 182, 30, 'F');
+    
+    doc.setFontSize(11);
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Batch ID: ${batch.id.slice(-12)}`, 20, 45);
+    if (batch.batchNumber) doc.text(`Batch #: ${batch.batchNumber}`, 20, 52);
+    if (batch.referenceNumber) doc.text(`DOP Ref: ${batch.referenceNumber}`, 20, 59);
+    
+    doc.text(`Total Amount: Rs. ${batch.totalAmount.toLocaleString('en-IN')}`, 120, 45);
+    doc.text(`Total Accounts: ${batch.accountCount}`, 120, 52);
+    doc.text(`Status: ${batch.status.toUpperCase()}`, 120, 59);
+
+    const tableData = batch.accounts.map((acc, idx) => [
+      idx + 1,
+      acc.accountNo,
+      acc.accountName || '-',
+      acc.monthPaidUpto || '-',
+      acc.nextDueDate || '-',
+      `Rs. ${acc.amount.toLocaleString('en-IN')}`
+    ]);
+
+    autoTable(doc, {
+      startY: 75,
+      head: [['#', 'Account Number', 'Holder Name', 'Paid Upto', 'Next Due', 'Amount']],
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [220, 38, 38], textColor: [255, 255, 255], fontStyle: 'bold' },
+      styles: { fontSize: 8, cellPadding: 3 },
+      columnStyles: {
+        0: { cellWidth: 10 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 50 },
+        3: { cellWidth: 25 },
+        4: { cellWidth: 25 },
+        5: { halign: 'right', cellWidth: 30 }
+      },
+      alternateRowStyles: { fillColor: [250, 250, 250] }
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text('Authorized Signature', 140, finalY + 20);
+    doc.line(135, finalY + 15, 185, finalY + 15);
+
+    doc.save(`batch_${batchIdentifier}.pdf`);
+  };
+
+  const handleExportAllBatchesPDF = () => {
+    if (savedBatches.length === 0) return;
+    
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(22);
+    doc.setTextColor(220, 38, 38);
+    doc.text('CONSOLIDATED BATCH REPORT', 14, 20);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Generated on: ${new Date().toLocaleString('en-IN')}`, 14, 28);
+    
+    // Summary Box
+    doc.setDrawColor(241, 245, 249);
+    doc.setFillColor(248, 250, 252);
+    doc.rect(14, 35, 182, 25, 'F');
+    
+    doc.setFontSize(11);
+    doc.setTextColor(15, 23, 42);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Total Batches: ${savedBatches.length}`, 20, 45);
+    doc.text(`Total Amount: Rs. ${savedBatches.reduce((sum, b) => sum + b.totalAmount, 0).toLocaleString('en-IN')}`, 20, 52);
+    doc.text(`Total Accounts: ${savedBatches.reduce((sum, b) => sum + b.accountCount, 0)}`, 120, 45);
+
+    let currentY = 70;
+
+    savedBatches.forEach((batch, index) => {
+      const batchIdentifier = batch.referenceNumber || batch.id.slice(-12);
+      
+      const tableData = batch.accounts.map((acc, idx) => [
+        idx + 1,
+        acc.accountNo,
+        acc.accountName || '-',
+        acc.monthPaidUpto || '-',
+        acc.nextDueDate || '-',
+        `Rs. ${acc.amount.toLocaleString('en-IN')}`
+      ]);
+
+      autoTable(doc, {
+        startY: currentY,
+        head: [
+          [{ 
+            content: `BATCH: ${batchIdentifier}  |  ACCOUNTS: ${batch.accountCount}  |  TOTAL: Rs. ${batch.totalAmount.toLocaleString('en-IN')}`, 
+            colSpan: 6, 
+            styles: { halign: 'center', fillColor: [51, 65, 85], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 10 } 
+          }],
+          ['#', 'Account Number', 'Holder Name', 'Paid Upto', 'Next Due', 'Amount']
+        ],
+        body: tableData,
+        theme: 'grid',
+        headStyles: { fillColor: [220, 38, 38] },
+        styles: { fontSize: 7, cellPadding: 2 },
+        columnStyles: {
+          0: { cellWidth: 10 },
+          1: { cellWidth: 35 },
+          2: { cellWidth: 50 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 25 },
+          5: { halign: 'right' }
+        },
+        margin: { top: 20 },
+        didDrawPage: (data) => {
+          // Add page number at bottom
+          doc.setFontSize(8);
+          doc.setTextColor(150);
+          doc.text(`Page ${doc.getNumberOfPages()}`, data.settings.margin.left, doc.internal.pageSize.height - 10);
+        }
+      });
+
+      currentY = (doc as any).lastAutoTable.finalY + 15;
+      
+      // If next table won't fit, start new page
+      if (currentY > 250 && index < savedBatches.length - 1) {
+        doc.addPage();
+        currentY = 20;
+      }
+    });
+
+    doc.save(`all_batches_${new Date().getTime()}.pdf`);
   };
 
   const handleDeleteBatch = async () => {
@@ -756,6 +904,7 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
           <AnimatePresence>
             {showManualAdd && (
               <motion.div
+                key="manual-add"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
@@ -856,6 +1005,7 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                     <AnimatePresence>
                       {exportAllOpen && (
                         <motion.div
+                          key="export-all-menu"
                           initial={{ opacity: 0, scale: 0.95, y: 10 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -863,10 +1013,13 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                         >
                           <div className="px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-2">Export All Batches</div>
                           <button onClick={() => { handleExportAllBatches('detailed'); setExportAllOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-brand/5 rounded-2xl transition-all flex items-center gap-4 group">
-                            <div className="w-3 h-3 rounded-full bg-brand shadow-sm group-hover:scale-125 transition-transform" /> Detailed Report
+                            <div className="w-3 h-3 rounded-full bg-brand shadow-sm group-hover:scale-125 transition-transform" /> Detailed CSV
                           </button>
                           <button onClick={() => { handleExportAllBatches('portal'); setExportAllOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-gold/5 rounded-2xl transition-all flex items-center gap-4 group">
                             <div className="w-3 h-3 rounded-full bg-gold shadow-sm group-hover:scale-125 transition-transform" /> Portal Format
+                          </button>
+                          <button onClick={() => { handleExportAllBatchesPDF(); setExportAllOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-red-50 rounded-2xl transition-all flex items-center gap-4 group">
+                            <div className="w-3 h-3 rounded-full bg-red-600 shadow-sm group-hover:scale-125 transition-transform" /> PDF Report
                           </button>
                         </motion.div>
                       )}
@@ -980,8 +1133,23 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                         <td className="px-10 py-8 text-right">
                           <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
                             <button 
-                              onClick={(e) => { e.stopPropagation(); setSelectedBatch(batch); }}
+                              onClick={(e) => { e.stopPropagation(); handleExportBatch(batch, 'detailed'); }}
+                              className="p-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-gold hover:text-white hover:border-gold transition-all shadow-sm active:scale-90"
+                              title="Download CSV"
+                            >
+                              <FileDown className="w-5 h-5" />
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); handleExportBatchPDF(batch); }}
                               className="p-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-brand hover:text-white hover:border-brand transition-all shadow-sm active:scale-90"
+                              title="Download PDF"
+                            >
+                              <Download className="w-5 h-5" />
+                            </button>
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setSelectedBatch(batch); }}
+                              className="p-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all shadow-sm active:scale-90"
+                              title="View Details"
                             >
                               <FileText className="w-5 h-5" />
                             </button>
@@ -1099,7 +1267,7 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
     {/* Batch Detail Modal */}
       <AnimatePresence>
         {selectedBatch && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div key="batch-modal-backdrop" className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1146,19 +1314,24 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                       <AnimatePresence>
                         {exportBatchOpen && (
                           <motion.div
+                            key="export-batch-menu"
                             initial={{ opacity: 0, scale: 0.95, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 10 }}
                             className="absolute right-0 mt-3 w-64 bg-white border border-gold/10 rounded-3xl shadow-premium z-20 p-3 overflow-hidden"
                           >
                             <div className="px-4 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 mb-2">Export Options</div>
-                            <button onClick={() => { handleExportBatch('detailed'); setExportBatchOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-brand/5 rounded-2xl transition-all flex items-center gap-4 group">
+                            <button onClick={() => { handleExportBatch(selectedBatch, 'detailed'); setExportBatchOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-brand/5 rounded-2xl transition-all flex items-center gap-4 group">
                               <div className="w-3 h-3 rounded-full bg-brand shadow-sm group-hover:scale-125 transition-transform" /> 
-                              <span>Detailed Report</span>
+                              <span>Detailed CSV</span>
                             </button>
-                            <button onClick={() => { handleExportBatch('portal'); setExportBatchOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-gold/5 rounded-2xl transition-all flex items-center gap-4 group">
+                            <button onClick={() => { handleExportBatch(selectedBatch, 'portal'); setExportBatchOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-gold/5 rounded-2xl transition-all flex items-center gap-4 group">
                               <div className="w-3 h-3 rounded-full bg-gold shadow-sm group-hover:scale-125 transition-transform" /> 
-                              <span>Portal Format</span>
+                              <span>Portal CSV</span>
+                            </button>
+                            <button onClick={() => { handleExportBatchPDF(selectedBatch); setExportBatchOpen(false); }} className="w-full text-left px-4 py-4 text-xs font-black text-slate-700 hover:bg-red-50 rounded-2xl transition-all flex items-center gap-4 group">
+                              <div className="w-3 h-3 rounded-full bg-red-600 shadow-sm group-hover:scale-125 transition-transform" /> 
+                              <span>PDF Report</span>
                             </button>
                           </motion.div>
                         )}

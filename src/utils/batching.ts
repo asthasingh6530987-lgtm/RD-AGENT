@@ -27,9 +27,10 @@ export function createBatches(accounts: Account[], maxAmount: number = 20000): B
     let placed = false;
     // Try to place in an existing batch
     for (const batch of batches) {
-      if (batch.totalAmount + account.amount <= maxAmount) {
+      const newTotal = Number((batch.totalAmount + account.amount).toFixed(2));
+      if (newTotal <= maxAmount) {
         batch.accounts.push(account);
-        batch.totalAmount += account.amount;
+        batch.totalAmount = newTotal;
         placed = true;
         break;
       }

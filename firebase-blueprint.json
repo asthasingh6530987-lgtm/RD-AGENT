@@ -53,6 +53,46 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["agentId", "uploadId", "totalAmount", "accountCount", "status", "accounts", "createdAt"]
+    },
+    "LotCustomer": {
+      "title": "LotCustomer",
+      "description": "An RD account managed by the agent for lot making.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "accountNo": { "type": "string" },
+        "name": { "type": "string" },
+        "amount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "accountNo", "name", "amount", "createdAt"]
+    },
+    "Checklist": {
+      "title": "Checklist",
+      "description": "A saved list of lot groupings.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "createdAt", "updatedAt"]
+    },
+    "TaskBlock": {
+      "title": "TaskBlock",
+      "description": "A block of accounts in a checklist.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "checklistId": { "type": "string" },
+        "groupNumber": { "type": "number" },
+        "accountsText": { "type": "string" },
+        "isCompleted": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "checklistId", "groupNumber", "accountsText", "isCompleted", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -67,6 +107,18 @@
     "/batches/{batchId}": {
       "schema": { "$ref": "#/entities/Batch" },
       "description": "Stores the ₹20,000 lots."
+    },
+    "/lot_customers/{customerId}": {
+      "schema": { "$ref": "#/entities/LotCustomer" },
+      "description": "Stores individual RD accounts for lot generation."
+    },
+    "/checklists/{checklistId}": {
+      "schema": { "$ref": "#/entities/Checklist" },
+      "description": "Stores user checklists."
+    },
+    "/task_blocks/{taskId}": {
+      "schema": { "$ref": "#/entities/TaskBlock" },
+      "description": "Stores task blocks for a checklist."
     }
   }
 }

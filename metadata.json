@@ -1,5 +1,5 @@
 {
   "name": "India Post RD Agent Portal",
-  "description": "Modern RD account management and CSV conversion portal for Dept of Post agents.",
+  "description": "Modern RD account management and CSV conversion portal for Dept of Post agents. Hosted at: https://rd-agent.netlify.app",
   "requestFramePermissions": []
 }
