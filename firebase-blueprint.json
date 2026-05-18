@@ -9,7 +9,8 @@
         "email": { "type": "string", "description": "User email address" },
         "name": { "type": "string", "description": "User display name" },
         "role": { "type": "string", "description": "User role, e.g., 'agent'" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastActiveAt": { "type": "string", "format": "date-time", "description": "Timestamp measuring when the user is last active online" }
       },
       "required": ["uid", "email", "createdAt"]
     },
@@ -93,9 +94,63 @@
         "updatedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "checklistId", "groupNumber", "accountsText", "isCompleted", "createdAt", "updatedAt"]
+    },
+    "LoginHistory": {
+      "title": "LoginHistory",
+      "description": "A record of an agent logging into the portal.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "loginAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "loginAt"]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Global site settings for About Us and Contact.",
+      "type": "object",
+      "properties": {
+        "aboutUsText": { "type": "string" },
+        "address": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "youtube": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["aboutUsText", "address", "email", "phone", "whatsapp", "youtube", "updatedAt"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "Messages from users via Contact Us form.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["unread", "read"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "phone", "message", "status", "createdAt"]
     }
   },
   "firestore": {
+    "/settings/{settingId}": {
+      "schema": { "$ref": "#/entities/SiteSettings" },
+      "description": "Global configuration settings"
+    },
+    "/contact_messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ContactMessage" },
+      "description": "Contact messages submitted by users"
+    },
+    "/login_history/{historyId}": {
+      "schema": { "$ref": "#/entities/LoginHistory" },
+      "description": "Records of all agent login actions"
+    },
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/User" },
       "description": "Stores agent profiles."

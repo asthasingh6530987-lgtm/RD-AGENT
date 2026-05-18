@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Calculator, 
   Percent, 
@@ -84,9 +84,15 @@ export default function FinanceCalculator() {
   const [monthlyInstallment, setMonthlyInstallment] = useState<number | string>(() => {
     return Number(localStorage.getItem('fcalc_monthly')) || 1000;
   });
-  const [rate, setRate] = useState<number | string>(6.7);
-  const [tenure, setTenure] = useState<number | string>(5); // years
-  const [tenureMonths, setTenureMonths] = useState<number | string>(60);
+  const [rate, setRate] = useState<number | string>(() => {
+    return Number(localStorage.getItem('fcalc_rate')) || 6.7;
+  });
+  const [tenure, setTenure] = useState<number | string>(() => {
+    return Number(localStorage.getItem('fcalc_tenure')) || 5;
+  }); // years
+  const [tenureMonths, setTenureMonths] = useState<number | string>(() => {
+    return Number(localStorage.getItem('fcalc_tenureMonths')) || 60;
+  });
   const [results, setResults] = useState<any>(null);
   const [history, setHistory] = useState<SavedCalculation[]>(() => {
     const saved = localStorage.getItem('fcalc_history');
@@ -107,28 +113,44 @@ export default function FinanceCalculator() {
   }, [monthlyInstallment]);
 
   useEffect(() => {
+    localStorage.setItem('fcalc_rate', rate.toString());
+  }, [rate]);
+
+  useEffect(() => {
+    localStorage.setItem('fcalc_tenure', tenure.toString());
+  }, [tenure]);
+
+  useEffect(() => {
+    localStorage.setItem('fcalc_tenureMonths', tenureMonths.toString());
+  }, [tenureMonths]);
+
+  useEffect(() => {
     localStorage.setItem('fcalc_history', JSON.stringify(history));
   }, [history]);
 
   // Sync rate when tab changes
+  const prevTabRef = useRef(activeTab);
   useEffect(() => {
-    const scheme = SCHEMES.find(s => s.id === activeTab);
-    if (scheme) {
-      setRate(scheme.rate);
-      // Auto-set tenure for fixed schemes
-      if (activeTab === 'rd' || activeTab === 'nsc') {
-        setTenure(5);
-        setTenureMonths(60);
-      } else if (activeTab === 'mis') {
-        setTenure(5);
-      } else if (activeTab === 'mssc') {
-        setTenure(2);
-      } else if (activeTab === 'scss') {
-        setTenure(5);
-      } else if (activeTab === 'agent') {
-        setTenureMonths(12);
-      } else if (activeTab === 'ppf' || activeTab === 'ssa') {
-        setTenure(15);
+    if (prevTabRef.current !== activeTab) {
+      prevTabRef.current = activeTab;
+      const scheme = SCHEMES.find(s => s.id === activeTab);
+      if (scheme) {
+        setRate(scheme.rate);
+        // Auto-set tenure for fixed schemes
+        if (activeTab === 'rd' || activeTab === 'nsc') {
+          setTenure(5);
+          setTenureMonths(60);
+        } else if (activeTab === 'mis') {
+          setTenure(5);
+        } else if (activeTab === 'mssc') {
+          setTenure(2);
+        } else if (activeTab === 'scss') {
+          setTenure(5);
+        } else if (activeTab === 'agent') {
+          setTenureMonths(12);
+        } else if (activeTab === 'ppf' || activeTab === 'ssa') {
+          setTenure(15);
+        }
       }
     }
   }, [activeTab]);

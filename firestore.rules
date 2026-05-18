@@ -116,12 +116,13 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidUser(data) {
-      return hasOnlyAllowedFields(['uid', 'email', 'name', 'role', 'status', 'createdAt']) &&
+      return hasOnlyAllowedFields(['uid', 'email', 'name', 'role', 'status', 'createdAt', 'lastActiveAt']) &&
              data.uid is string && data.uid.size() > 0 && data.uid.size() < 100 &&
              data.email is string && isValidEmail(data.email) &&
              isValidOptionalString('name', 0, 100) &&
              isValidOptionalString('role', 0, 50) &&
              data.status in ['pending', 'approved', 'rejected'] &&
+             (!('lastActiveAt' in data) || data.lastActiveAt is timestamp) &&
              data.createdAt is timestamp;
     }
 
@@ -195,9 +196,59 @@ service cloud.firestore {
              data.updatedAt is timestamp;
     }
 
+    function isValidLoginHistory(data) {
+      return hasOnlyAllowedFields(['userId', 'name', 'email', 'role', 'loginAt']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 100 &&
+             isValidOptionalString('name', 0, 100) &&
+             data.email is string && isValidEmail(data.email) &&
+             isValidOptionalString('role', 0, 50) &&
+             data.loginAt is timestamp;
+    }
+
+    function isValidSiteSettings(data) {
+      return hasOnlyAllowedFields(['aboutUsText', 'address', 'email', 'phone', 'whatsapp', 'youtube', 'updatedAt']) &&
+             data.aboutUsText is string && data.aboutUsText.size() <= 10000 &&
+             data.address is string && data.address.size() <= 1000 &&
+             data.email is string && data.email.size() <= 150 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.whatsapp is string && data.whatsapp.size() <= 20 &&
+             data.youtube is string && data.youtube.size() <= 200 &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidContactMessage(data) {
+      return hasOnlyAllowedFields(['name', 'email', 'phone', 'message', 'status', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.email is string && data.email.size() > 0 && data.email.size() <= 150 &&
+             data.phone is string && data.phone.size() <= 20 &&
+             data.message is string && data.message.size() > 0 && data.message.size() <= 5000 &&
+             data.status in ['unread', 'read'] &&
+             data.createdAt is timestamp;
+    }
+
     // ===============================================================
     // Rules
     // ===============================================================
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidSiteSettings(request.resource.data);
+    }
+
+    match /contact_messages/{messageId} {
+      allow read: if isAdmin();
+      allow create: if isValidContactMessage(request.resource.data);
+      allow update: if isAdmin() && isValidContactMessage(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /login_history {
+      allow list: if isAdmin();
+      match /{historyId} {
+        allow read: if isAdmin();
+        allow create: if (isAuthenticated() && isValidLoginHistory(request.resource.data) && request.resource.data.userId == request.auth.uid) || isAdmin();
+      }
+    }
 
     match /users {
       allow list: if isAdmin();

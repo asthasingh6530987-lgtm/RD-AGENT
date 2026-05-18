@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { db } from '../firebase';
-import { collection, getDocs, updateDoc, doc, deleteDoc, query, orderBy, where, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, getDoc, setDoc, updateDoc, doc, deleteDoc, query, orderBy, where, serverTimestamp } from 'firebase/firestore';
 import { auth } from '../firebase';
-import { Bell, Send, Users, FileText, Database, Loader2, ShieldCheck, User as UserIcon, Trash2, Eye, Calendar, X, IndianRupee, CheckCircle2, Clock, AlertCircle, RefreshCw, Download, Zap } from 'lucide-react';
+import { Bell, Send, Users, FileText, Database, Loader2, ShieldCheck, User as UserIcon, Trash2, Eye, Calendar, X, IndianRupee, CheckCircle2, Clock, AlertCircle, RefreshCw, Download, Zap, Globe, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmationModal from './ConfirmationModal';
 import Papa from 'papaparse';
@@ -71,6 +71,7 @@ interface UserData {
   name: string;
   role: 'agent' | 'admin';
   status: 'pending' | 'approved' | 'rejected';
+  lastActiveAt?: any;
 }
 
 interface UploadData {
@@ -108,7 +109,123 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
   const [selectedUpload, setSelectedUpload] = useState<UploadData | null>(null);
   const [uploadBatches, setUploadBatches] = useState<BatchData[]>([]);
   const [loadingBatches, setLoadingBatches] = useState(false);
-  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'uploads'>('users');
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'uploads' | 'settings' | 'messages'>('users');
+  
+  // Tracking
+  const [showActiveAgents, setShowActiveAgents] = useState(false);
+  const [loginHistory, setLoginHistory] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historyFilter, setHistoryFilter] = useState<string | null>(null);
+
+  // Settings
+  const [siteSettings, setSiteSettings] = useState<any>({
+    aboutUsText: '',
+    address: '',
+    email: '',
+    phone: '',
+    whatsapp: '',
+    youtube: '',
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+
+  // Messages
+  const [contactMessages, setContactMessages] = useState<any[]>([]);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeAdminTab === 'settings') {
+      const fetchSettings = async () => {
+        setSettingsLoading(true);
+        try {
+          const docRef = doc(db, 'settings', 'general');
+          const docSnap = await getDocs(query(collection(db, 'settings')));
+          if (!docSnap.empty) {
+             const data = docSnap.docs[0].data();
+             setSiteSettings(data);
+          } else {
+             const gSnap = await getDoc(docRef);
+             if (gSnap.exists()) {
+               setSiteSettings(gSnap.data());
+             }
+          }
+        } catch (error) {
+          console.error("Error fetching settings:", error);
+        } finally {
+          setSettingsLoading(false);
+        }
+      };
+      fetchSettings();
+    } else if (activeAdminTab === 'messages') {
+      const fetchMessages = async () => {
+        setMessagesLoading(true);
+        try {
+          const q = query(collection(db, 'contact_messages'), orderBy('createdAt', 'desc'));
+          const snap = await getDocs(q);
+          setContactMessages(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } catch (error) {
+          console.error("Error fetching messages:", error);
+        } finally {
+          setMessagesLoading(false);
+        }
+      };
+      fetchMessages();
+    }
+  }, [activeAdminTab]);
+
+  const saveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSettingsSaving(true);
+    try {
+      await setDoc(doc(db, 'settings', 'general'), {
+        ...siteSettings,
+        updatedAt: serverTimestamp()
+      });
+      addToast?.('Settings updated successfully', 'success');
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      handleFirestoreError(error, OperationType.WRITE, 'settings/general');
+      addToast?.('Failed to save settings', 'error');
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  const markMessageRead = async (messageId: string) => {
+    try {
+      await updateDoc(doc(db, 'contact_messages', messageId), { status: 'read' });
+      setContactMessages(prev => prev.map(m => m.id === messageId ? { ...m, status: 'read' } : m));
+      addToast?.('Message marked as read', 'success');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'contact_messages');
+    }
+  };
+
+  const activeUsersCount = users.filter(u => {
+    if (!u.lastActiveAt) return false;
+    const activeTime = u.lastActiveAt.toMillis ? u.lastActiveAt.toMillis() : u.lastActiveAt;
+    return (Date.now() - activeTime) < 5 * 60 * 1000;
+  }).length;
+  
+  const fetchLoginHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      // Query without limit to get full history, or limit(100) if it gets too large
+      const q = query(collection(db, 'login_history'), orderBy('loginAt', 'desc'));
+      const snap = await getDocs(q);
+      setLoginHistory(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    } catch (error) {
+      console.error("Error fetching login history:", error);
+      handleFirestoreError(error, OperationType.LIST, 'login_history');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+  
+  const handleOpenTracking = () => {
+    setShowActiveAgents(true);
+    fetchLoginHistory();
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -234,9 +351,12 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
       batchesToExport.forEach(batch => {
         const batchRef = batch.referenceNumber || `Batch ${batch.batchNumber}`;
         batch.accounts.forEach(acc => {
+          // Add normal string
+          const formattedAccNo = acc.accountNo ? String(acc.accountNo) : '';
+          
           csvData.push({
             'Batch Reference': batchRef,
-            'Account No': acc.accountNo,
+            'Account No': formattedAccNo,
             'Account Name': acc.accountName || '',
             'Month Paid Upto': acc.monthPaidUpto || '',
             'Next RD Installment Due Date': acc.nextDueDate || '',
@@ -325,7 +445,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
             </p>
           </div>
           
-          <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="flex flex-col gap-3 w-full md:w-auto">
             <button 
               onClick={() => window.location.reload()}
               className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-slate-800 transition-all hover-lift shadow-lg shadow-slate-900/10 w-full md:w-auto"
@@ -333,6 +453,15 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
               <RefreshCw className="w-5 h-5" />
               Refresh Data
             </button>
+            <a 
+              href="https://dop-help.onrender.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-center text-sm font-bold text-slate-500 hover:text-brand transition-colors underline decoration-slate-300 hover:decoration-brand underline-offset-4 flex items-center justify-center gap-1"
+            >
+              DOP Help
+              <Zap className="w-3 h-3" />
+            </a>
           </div>
         </div>
       </div>
@@ -340,19 +469,28 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
       {/* Stats Overview */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         <motion.div 
+          onClick={handleOpenTracking}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-premium glass-card relative overflow-hidden group hover:border-brand/20 transition-all"
+          className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-premium glass-card relative overflow-hidden group hover:border-brand/20 transition-all cursor-pointer hover:shadow-xl hover:-translate-y-1"
+          title="Click to view Active Agent Tracking"
         >
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Users className="w-16 h-16 text-brand" />
           </div>
           <p className="text-slate-600 font-bold text-sm uppercase tracking-wider mb-1">Total Agents</p>
           <h3 className="text-5xl font-black text-info mb-4 group-hover:text-info transition-colors">{stats.totalUsers}</h3>
-          <div className="flex items-center gap-2 text-emerald-600 font-bold text-sm bg-emerald-50 w-fit px-3 py-1 rounded-full">
-            <CheckCircle2 className="w-4 h-4" />
-            Active System
+          
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 text-emerald-600 font-bold text-xs bg-emerald-50 w-fit px-2.5 py-1 rounded-full">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Active System
+            </div>
+            <div className="flex items-center gap-2 text-brand font-black text-xs bg-brand/5 w-fit px-3 py-1 rounded-full shadow-sm border border-brand/10">
+              <span className="w-2 h-2 rounded-full bg-brand animate-pulse"></span>
+              {activeUsersCount} Active Now
+            </div>
           </div>
         </motion.div>
 
@@ -391,11 +529,10 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
         </motion.div>
       </div>
       
-      {/* Mobile Tab Switcher */}
-      <div className="lg:hidden flex bg-white rounded-2xl p-2 border border-slate-100 shadow-sm gap-2">
+      <div className="flex bg-white rounded-[2rem] p-3 border border-slate-100 shadow-sm gap-2 mt-4 mx-auto w-fit overflow-x-auto">
         <button
           onClick={() => setActiveAdminTab('users')}
-          className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+          className={`flex-none px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
             activeAdminTab === 'users' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
           }`}
         >
@@ -403,17 +540,33 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
         </button>
         <button
           onClick={() => setActiveAdminTab('uploads')}
-          className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+          className={`flex-none px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
             activeAdminTab === 'uploads' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
           }`}
         >
           Uploads
         </button>
+        <button
+          onClick={() => setActiveAdminTab('settings')}
+          className={`flex-none px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+            activeAdminTab === 'settings' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
+          }`}
+        >
+          Site Settings
+        </button>
+        <button
+          onClick={() => setActiveAdminTab('messages')}
+          className={`flex-none px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+            activeAdminTab === 'messages' ? 'bg-slate-900 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'
+          }`}
+        >
+          Messages
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8">
         {/* User Management */}
-        <div className={`lg:col-span-5 space-y-6 ${activeAdminTab !== 'users' ? 'hidden lg:block' : ''}`}>
+        <div className={`lg:col-span-5 space-y-6 ${activeAdminTab !== 'users' && activeAdminTab !== 'uploads' ? 'hidden' : activeAdminTab !== 'users' ? 'hidden lg:block' : ''}`}>
           <div className="bg-white rounded-[2rem] shadow-sm border border-slate-100 p-4 sm:p-8 glass-card">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
               <div>
@@ -660,6 +813,161 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
         </div>
       </div>
       
+      {activeAdminTab === 'settings' && (
+        <div className="mt-8 bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 sm:p-10 glass-card">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-premium">
+              <Globe className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Site Settings</h3>
+              <p className="text-slate-500 font-medium text-sm">Manage global content and contact details shown to users</p>
+            </div>
+          </div>
+          
+          {settingsLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-brand" />
+            </div>
+          ) : (
+            <form onSubmit={saveSettings} className="space-y-6">
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">About Us Text</label>
+                <textarea
+                  value={siteSettings.aboutUsText || ''}
+                  onChange={(e) => setSiteSettings({ ...siteSettings, aboutUsText: e.target.value })}
+                  placeholder="Enter content for the About Us page..."
+                  className="w-full min-h-[120px] px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-brand focus:ring-0 transition-all custom-scrollbar outline-none"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Contact Email</label>
+                  <input
+                    type="email"
+                    value={siteSettings.email || ''}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, email: e.target.value })}
+                    placeholder="contact@example.com"
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-brand outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={siteSettings.phone || ''}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, phone: e.target.value })}
+                    placeholder="+91 1234567890"
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-brand outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">WhatsApp Number</label>
+                  <input
+                    type="tel"
+                    value={siteSettings.whatsapp || ''}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, whatsapp: e.target.value })}
+                    placeholder="+91 1234567890"
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-brand outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">YouTube Link</label>
+                  <input
+                    type="url"
+                    value={siteSettings.youtube || ''}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, youtube: e.target.value })}
+                    placeholder="https://youtube.com/@channel"
+                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-brand outline-none"
+                    required
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Office Address</label>
+                  <textarea
+                    value={siteSettings.address || ''}
+                    onChange={(e) => setSiteSettings({ ...siteSettings, address: e.target.value })}
+                    placeholder="123 Agent Street..."
+                    className="w-full min-h-[80px] px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:border-brand outline-none"
+                    required
+                  />
+                </div>
+              </div>
+              <button
+                type="submit"
+                disabled={settingsSaving}
+                className="w-full sm:w-auto px-10 py-5 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 active:scale-95 disabled:opacity-50 flex items-center justify-center min-w-[200px]"
+              >
+                {settingsSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Save Settings'}
+              </button>
+            </form>
+          )}
+        </div>
+      )}
+
+      {activeAdminTab === 'messages' && (
+        <div className="mt-8 bg-white rounded-[2rem] shadow-sm border border-slate-100 p-6 sm:p-10 glass-card">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shrink-0 shadow-premium">
+              <MessageSquare className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-black text-slate-900 tracking-tight">Contact Messages</h3>
+              <p className="text-slate-500 font-medium text-sm">inquiries and support requests from users</p>
+            </div>
+          </div>
+          
+          {messagesLoading ? (
+            <div className="flex justify-center py-12">
+              <Loader2 className="w-8 h-8 animate-spin text-brand" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {contactMessages.map((msg) => (
+                <div key={msg.id} className={`p-6 rounded-2xl border transition-colors ${msg.status === 'unread' ? 'bg-indigo-50/30 border-indigo-100 shadow-sm' : 'bg-slate-50 border-slate-100'}`}>
+                  <div className="flex flex-col sm:flex-row justify-between gap-4 mb-4">
+                    <div>
+                      <h4 className="font-black text-lg text-slate-900 flex items-center gap-2">
+                        {msg.name}
+                        {msg.status === 'unread' && <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />}
+                      </h4>
+                      <p className="text-sm font-medium text-slate-600 font-mono mt-1">{msg.email} • {msg.phone}</p>
+                    </div>
+                    <div className="flex flex-col sm:items-end gap-2 shrink-0">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        {msg.createdAt?.toDate ? msg.createdAt.toDate().toLocaleString('en-IN', {
+                          day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
+                        }) : 'N/A'}
+                      </span>
+                      {msg.status === 'unread' && (
+                        <button
+                          onClick={() => markMessageRead(msg.id)}
+                          className="px-4 py-1.5 bg-white border border-slate-200 text-[10px] font-black uppercase tracking-widest text-slate-600 rounded-xl hover:bg-slate-50 hover:text-brand transition-colors shadow-sm mt-1 w-fit"
+                        >
+                          Mark as Read
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-xl border border-slate-100 text-sm text-slate-700 whitespace-pre-wrap">
+                    {msg.message}
+                  </div>
+                </div>
+              ))}
+              {contactMessages.length === 0 && (
+                <div className="py-12 text-center text-slate-400 font-medium italic">
+                  No messages found.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <ConfirmationModal
         isOpen={!!deleteTarget}
         title={`Delete ${deleteTarget?.type === 'user' ? 'User' : 'Upload'}`}
@@ -678,6 +986,7 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
       <AnimatePresence>
         {selectedUpload && (
           <div key="admin-upload-modal-backdrop" className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+            {/* Same code as original for selectedUpload */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -784,6 +1093,146 @@ export default function AdminDashboard({ user, addToast }: AdminDashboardProps) 
                     )}
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {showActiveAgents && (
+          <div key="active-agents-modal" className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 40 }}
+              className="bg-white rounded-[2.5rem] shadow-premium border border-slate-200 w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col relative"
+            >
+              <div className="absolute top-0 left-0 w-full h-2 bg-gradient-brand"></div>
+              
+              <div className="p-6 sm:p-10 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-6 bg-slate-50/30">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 bg-brand/10 rounded-xl flex items-center justify-center text-brand shrink-0 shadow-premium">
+                      <Users className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-2xl font-black text-slate-900 tracking-tight">Active Agent Tracking</h3>
+                  </div>
+                  <p className="text-slate-500 font-medium text-sm">
+                    Monitor currently active agents and view complete login history records.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    onClick={() => { setShowActiveAgents(false); setHistoryFilter(null); }}
+                    className="p-3 hover:bg-slate-200 rounded-2xl transition-colors text-slate-500 bg-slate-100 sm:bg-transparent"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 sm:p-10 overflow-y-auto flex-1 custom-scrollbar">
+                <div className="mb-10">
+                  <h4 className="text-lg font-black text-slate-900 flex items-center gap-2 mb-4">
+                    <div className="w-2 h-2 rounded-full bg-brand animate-pulse"></div>
+                    Active Now ({activeUsersCount})
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {users.filter(u => {
+                      if (!u.lastActiveAt) return false;
+                      const activeTime = u.lastActiveAt.toMillis ? u.lastActiveAt.toMillis() : u.lastActiveAt;
+                      return (Date.now() - activeTime) < 5 * 60 * 1000;
+                    }).map(u => (
+                      <div key={u.id} 
+                        onClick={() => setHistoryFilter(historyFilter === u.id ? null : u.id)}
+                        className={`p-4 rounded-[1.5rem] border transition-all cursor-pointer flex flex-col gap-2 ${historyFilter === u.id ? 'bg-brand/5 border-brand/20 shadow-md' : 'bg-white border-slate-100 shadow-sm hover:border-brand/20'}`}>
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 shrink-0">
+                            <UserIcon className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 truncate text-sm">{u.name || 'Unknown'}</p>
+                            <p className="text-xs text-slate-500 truncate">{u.role}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {activeUsersCount === 0 && (
+                      <div className="col-span-full py-8 text-center bg-slate-50 rounded-[1.5rem] border border-dashed border-slate-200">
+                        <p className="text-slate-400 font-bold">No agents are currently active.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                      <Clock className="w-5 h-5 text-slate-400" />
+                      Login History
+                    </h4>
+                    {historyFilter && (
+                      <button 
+                        onClick={() => setHistoryFilter(null)}
+                        className="text-xs font-bold text-brand hover:text-brand-dark flex items-center gap-1 bg-brand/5 px-3 py-1 rounded-full transition-colors"
+                      >
+                       Clear Filter <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {loadingHistory ? (
+                    <div className="flex justify-center py-12">
+                      <Loader2 className="w-8 h-8 animate-spin text-brand" />
+                    </div>
+                  ) : (
+                    <div className="bg-white border border-slate-100 rounded-[2rem] overflow-hidden shadow-sm">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50/80 border-b border-slate-100">
+                            <th className="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">User</th>
+                            <th className="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Email</th>
+                            <th className="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest">Role</th>
+                            <th className="py-4 px-6 text-[10px] font-black text-slate-500 uppercase tracking-widest text-right">Login Time</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50">
+                          {loginHistory.filter(h => !historyFilter || h.userId === historyFilter).map((record, i) => (
+                            <tr key={record.id || i} className="hover:bg-slate-50/50 transition-colors">
+                              <td className="py-4 px-6">
+                                <div className="font-bold text-slate-900 text-sm">{record.name}</div>
+                              </td>
+                              <td className="py-4 px-6">
+                                <div className="text-slate-500 text-sm">{record.email}</div>
+                              </td>
+                              <td className="py-4 px-6">
+                                <div className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                  record.role === 'admin' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-600'
+                                }`}>
+                                  {record.role}
+                                </div>
+                              </td>
+                              <td className="py-4 px-6 text-right">
+                                <div className="text-slate-600 text-sm font-medium">
+                                  {record.loginAt?.toDate ? record.loginAt.toDate().toLocaleString('en-IN', {
+                                    day: '2-digit', month: 'short', year: 'numeric',
+                                    hour: '2-digit', minute: '2-digit'
+                                  }) : 'Unknown Time'}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                          {loginHistory.length === 0 && (
+                            <tr>
+                              <td colSpan={4} className="py-8 text-center text-slate-400 font-medium italic">
+                                No login history found.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>

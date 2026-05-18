@@ -642,7 +642,10 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
             const amountStr = getVal(['amount', 'denomination', 'value']) || Object.values(row)[1] || Object.values(row)[2];
             
             const amount = parseFloat(String(amountStr || '0').replace(/[^0-9.]/g, ''));
-            const acctStr = String(accountNo || '').trim();
+            let acctStr = String(accountNo || '').trim();
+            if (acctStr.startsWith('="') && acctStr.endsWith('"')) {
+              acctStr = acctStr.slice(2, -1);
+            }
 
             if (acctStr && !isNaN(amount) && amount > 0) {
               // Check if account already exists in current list or in the new batch
@@ -731,7 +734,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
       const customer = customers.find(c => c.accountNo === collection.accountNo);
       return [
         index + 1,
-        collection.accountNo,
+        collection.accountNo.replace(/^="|"$/g, ''),
         customer?.accountName || '-',
         collection.amount.toLocaleString(),
         collection.installmentMonths || 1
@@ -777,7 +780,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
       const customer = customers.find(c => c.accountNo === collection.accountNo);
       return [
         collection.collectionDate,
-        collection.accountNo,
+        collection.accountNo.replace(/^="|"$/g, ''),
         customer?.accountName || '-',
         collection.amount.toLocaleString(),
         collection.installmentMonths || 1
@@ -1090,7 +1093,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                                <Circle className="w-5 h-5" />}
                             </button>
                           </td>
-                          <td className="py-3.5 px-4 font-mono text-sm font-medium text-slate-700 cursor-pointer group-hover:text-brand transition-colors" onClick={() => toggleCollection(customer)}>{customer.accountNo}</td>
+                          <td className="py-3.5 px-4 font-mono text-sm font-medium text-slate-700 cursor-pointer group-hover:text-brand transition-colors" onClick={() => toggleCollection(customer)}>{customer.accountNo.replace(/^="|"$/g, '')}</td>
                           <td 
                             className="py-3.5 px-4 text-sm font-semibold text-slate-900 cursor-pointer hover:text-brand transition-colors" 
                             onClick={(e) => {
@@ -1179,7 +1182,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                             <Star className={`w-5 h-5 ${customer.isFavorite ? 'fill-current' : ''}`} />
                           </button>
                           <div>
-                            <div className="font-mono font-medium text-slate-700 text-sm mb-0.5">{customer.accountNo}</div>
+                            <div className="font-mono font-medium text-slate-700 text-sm mb-0.5">{customer.accountNo.replace(/^="|"$/g, '')}</div>
                             <div 
                               className="text-sm text-slate-900 font-semibold cursor-pointer hover:text-brand transition-colors"
                               onClick={(e) => {

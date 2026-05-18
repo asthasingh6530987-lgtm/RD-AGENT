@@ -8,8 +8,9 @@ import Converter from './components/Converter';
 import AdminDashboard from './components/AdminDashboard';
 import CollectionTracker from './components/CollectionTracker';
 import FinanceCalculator from './components/FinanceCalculator';
-import LotMaker from './components/LotMaker';
+// import LotMaker from './components/LotMaker';
 import Checklists from './components/Checklists';
+import About from './components/About';
 import ErrorBoundary from './components/ErrorBoundary';
 import ConfirmationModal from './components/ConfirmationModal';
 import { LogIn, Loader2, LayoutDashboard, FileType, Building2, ShieldCheck, Zap, LogOut, ShieldAlert, X, CheckCircle2, AlertCircle, Info, Wallet, Calculator, Globe, Table as TableIcon, ListChecks, CheckSquare } from 'lucide-react';
@@ -25,7 +26,7 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<'agent' | 'admin' | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'converter' | 'admin' | 'collections' | 'calculators' | 'lotmaker' | 'checklists'>(() => {
+  const [currentView, setCurrentView] = useState<'dashboard' | 'converter' | 'admin' | 'collections' | 'calculators' | 'checklists' | 'about'>(() => {
     const saved = localStorage.getItem('rd_portal_current_view');
     return (saved as any) || 'dashboard';
   });
@@ -59,6 +60,45 @@ export default function App() {
   const removeToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
+
+  // Update last active status periodically
+  useEffect(() => {
+    if (!user) return;
+    
+    // Update immediately on mount if user exists
+    const updateActiveStatus = async () => {
+      try {
+        await updateDoc(doc(db, 'users', user.uid), { lastActiveAt: serverTimestamp() });
+      } catch (e) {
+        console.error('Failed to update presence', e);
+      }
+    };
+    
+    updateActiveStatus();
+    
+    // Then every 2 minutes
+    const intervalId = setInterval(updateActiveStatus, 2 * 60 * 1000);
+    
+    // Also update when user interacts with the app (throttled)
+    const handleInteraction = () => {
+      const now = Date.now();
+      const lastUpdate = parseInt(sessionStorage.getItem('last_interaction_update') || '0');
+      // Update at most once every minute based on interaction
+      if (now - lastUpdate > 60000) {
+        sessionStorage.setItem('last_interaction_update', now.toString());
+        updateActiveStatus();
+      }
+    };
+    
+    window.addEventListener('mousedown', handleInteraction);
+    window.addEventListener('keydown', handleInteraction);
+    
+    return () => {
+      clearInterval(intervalId);
+      window.removeEventListener('mousedown', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+  }, [user]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -120,6 +160,30 @@ export default function App() {
             setRole(null);
           } else {
             console.log("Login successful. User Role:", userRole);
+
+            // Active Agent Tracking
+            if (!sessionStorage.getItem(`login_recorded_${currentUser.uid}`)) {
+              try {
+                const { collection, addDoc } = await import('firebase/firestore');
+                await addDoc(collection(db, 'login_history'), {
+                  userId: currentUser.uid,
+                  name: currentUser.displayName || userData?.name || 'Unknown',
+                  email: currentUser.email,
+                  role: userRole,
+                  loginAt: serverTimestamp(),
+                });
+                sessionStorage.setItem(`login_recorded_${currentUser.uid}`, 'true');
+              } catch (e) {
+                console.error('Failed to log history', e);
+              }
+            }
+
+            try {
+              await updateDoc(userDocRef, { lastActiveAt: serverTimestamp() });
+            } catch (e) {
+              console.error('Failed to update lastActiveAt', e);
+            }
+
             setUser(currentUser);
             setRole(userRole as 'agent' | 'admin');
             setCurrentView(userRole === 'admin' ? 'admin' : 'dashboard');
@@ -577,17 +641,6 @@ export default function App() {
               Calculators
             </button>
             <button
-              onClick={() => setCurrentView('lotmaker')}
-              className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center gap-3 group ${
-                currentView === 'lotmaker' 
-                  ? 'bg-slate-900 text-white shadow-premium-hover' 
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-brand'
-              }`}
-            >
-              <ListChecks className={`w-4 h-4 transition-colors ${currentView === 'lotmaker' ? 'text-brand' : 'group-hover:text-brand'}`} />
-              Lot Maker
-            </button>
-            <button
               onClick={() => setCurrentView('converter')}
               className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center gap-3 group ${
                 currentView === 'converter' 
@@ -608,6 +661,17 @@ export default function App() {
             >
               <CheckSquare className={`w-4 h-4 transition-colors ${currentView === 'checklists' ? 'text-brand' : 'group-hover:text-brand'}`} />
               Lot Checklists
+            </button>
+            <button
+              onClick={() => setCurrentView('about')}
+              className={`px-6 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 flex items-center gap-3 group ${
+                currentView === 'about' 
+                  ? 'bg-slate-900 text-white shadow-premium-hover' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-brand'
+              }`}
+            >
+              <Info className={`w-4 h-4 transition-colors ${currentView === 'about' ? 'text-brand' : 'group-hover:text-brand'}`} />
+              About Us
             </button>
           </div>
         </div>
@@ -652,18 +716,6 @@ export default function App() {
         </button>
 
         <button
-          onClick={() => setCurrentView('lotmaker')}
-          className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-500 min-w-[4rem] ${
-            currentView === 'lotmaker' ? 'text-brand scale-110' : 'text-slate-300 hover:text-brand/50'
-          }`}
-        >
-          <div className={`p-2.5 rounded-2xl transition-all duration-500 ${currentView === 'lotmaker' ? 'bg-brand/10 shadow-brand' : ''}`}>
-            <ListChecks className="w-7 h-7" />
-          </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Lots</span>
-        </button>
-        
-        <button
           onClick={() => setCurrentView('converter')}
           className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-500 min-w-[4rem] ${
             currentView === 'converter' ? 'text-brand scale-110' : 'text-slate-300 hover:text-brand/50'
@@ -684,7 +736,19 @@ export default function App() {
           <div className={`p-2.5 rounded-2xl transition-all duration-500 ${currentView === 'checklists' ? 'bg-brand/10 shadow-brand' : ''}`}>
             <CheckSquare className="w-7 h-7" />
           </div>
-          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Lot Checklists</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Checklists</span>
+        </button>
+
+        <button
+          onClick={() => setCurrentView('about')}
+          className={`flex-shrink-0 flex flex-col items-center gap-2 transition-all duration-500 min-w-[4rem] ${
+            currentView === 'about' ? 'text-brand scale-110' : 'text-slate-300 hover:text-brand/50'
+          }`}
+        >
+          <div className={`p-2.5 rounded-2xl transition-all duration-500 ${currentView === 'about' ? 'bg-brand/10 shadow-brand' : ''}`}>
+            <Info className="w-7 h-7" />
+          </div>
+          <span className="text-[10px] font-black uppercase tracking-[0.2em]">About</span>
         </button>
 
         {role === 'admin' && (
@@ -728,10 +792,10 @@ export default function App() {
               <CollectionTracker user={user} addToast={addToast} />
             ) : currentView === 'calculators' ? (
               <FinanceCalculator />
-            ) : currentView === 'lotmaker' ? (
-              <LotMaker userId={user.uid} addToast={addToast} />
             ) : currentView === 'checklists' ? (
               <Checklists userId={user.uid} addToast={addToast} />
+            ) : currentView === 'about' ? (
+              <About />
             ) : (
               <Converter />
             )}

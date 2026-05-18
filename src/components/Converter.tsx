@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import Papa from 'papaparse';
+import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as pdfjsLib from 'pdfjs-dist';
 import { GlobalWorkerOptions, version } from 'pdfjs-dist';
-import { Upload, FileText, FileDown, Loader2, AlertCircle, X, CheckCircle2, RefreshCw, Eye, CreditCard, ListChecks, Copy } from 'lucide-react';
+import { Upload, FileText, FileDown, Loader2, AlertCircle, X, CheckCircle2, RefreshCw, Eye, CreditCard, ListChecks, Copy, FileCode2, FileSpreadsheet } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { GoogleGenAI } from "@google/genai";
 
@@ -19,7 +20,7 @@ export default function Converter() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [textResult, setTextResult] = useState<string | null>(null);
-  const [conversionType, setConversionType] = useState<'csv-to-pdf' | 'pdf-to-csv' | 'ai-pdf-extraction' | 'ai-account-extraction' | 'ai-lot-grouping' | 'ai-deposit-extraction'>(() => {
+  const [conversionType, setConversionType] = useState<'csv-to-pdf' | 'pdf-to-csv' | 'ai-pdf-extraction' | 'ai-account-extraction' | 'ai-account-amount-extraction' | 'ai-lot-grouping' | 'ai-deposit-extraction'>(() => {
     return (localStorage.getItem('conv_active_type') as any) || 'csv-to-pdf';
   });
 
@@ -55,12 +56,13 @@ export default function Converter() {
 
 CRITICAL INSTRUCTIONS:
 - You MUST preserve the EXACT sequence and order of the rows as they appear in the original document from top to bottom.
+- IMPORTANT: You MUST preserve any leading zeros in all numbers (e.g., output "0123" instead of "123"). Do not let numbers be truncated.
 - Output the extracted data STRICTLY in standard CSV format.
 - Include a header row representing the columns found in the table.
 - Do not include any markdown formatting, conversational text, or explanations. Only return the raw CSV text.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-flash-latest",
         contents: {
           parts: [
             {
@@ -88,7 +90,6 @@ CRITICAL INSTRUCTIONS:
       const results = Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
-          dynamicTyping: true,
       });
 
       if (results.data.length === 0) {
@@ -124,12 +125,13 @@ CRITICAL INSTRUCTIONS:
 
 CRITICAL INSTRUCTIONS:
 - You MUST preserve the EXACT sequence and order of the records as they appear in the original document from top to bottom.
+- IMPORTANT: You MUST preserve any leading zeros in Account Numbers (e.g., output "012345" instead of "12345").
 - Output the extracted data STRICTLY in standard CSV format.
 - Include a header row: Account No,Account Name,Denomination.
 - Do not include any markdown formatting, conversational text, or explanations. Only return the raw CSV text.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-flash-latest",
         contents: {
           parts: [
             {
@@ -157,7 +159,6 @@ CRITICAL INSTRUCTIONS:
       const results = Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
-          dynamicTyping: true,
       });
 
       if (results.data.length === 0) {
@@ -177,7 +178,7 @@ CRITICAL INSTRUCTIONS:
     }
   };
 
-  const extractGroupingWithAI = async (fileToParse: File) => {
+  const extractAccountAmountWithAI = async (fileToParse: File) => {
     setProcessing(true);
     setError(null);
     setSuccess(null);
@@ -185,27 +186,17 @@ CRITICAL INSTRUCTIONS:
       const base64Data = await fileToBase64(fileToParse);
 
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-      const prompt = `You are a data extraction and grouping specialist. Your task is to process a PDF containing financial details with the following strict rules:
-
-1. EXTRACTION: Scan the document and extract every "Account Number" and its corresponding "Amount". Ignore all other data.
-
-2. GROUPING LOGIC: 
-   - Group the accounts into sets where the sum of their amounts is approximately 20,000 (do not exceed 20,000 per group unless a single account is larger than that).
-   - Label the first group as "1.", the second as "2.", and so on.
-
-3. FORMATTING:
-   - Provide the output in a clean, plain text format suitable for copying into Notepad (.txt).
-   - For each numbered group, list the Account Numbers included in that group.
-   - Example format:
-     1. [Account Number ], [Account Number ], [Account Number ]
-     2. [Account Number ], [Account Number ]
-
-4. COMPLETION: Continue this process until every account number from the PDF has been assigned to a group. Do not leave any accounts out.
-
-Output only the numbered list. No conversational text.`;
+      const prompt = `I am uploading a PDF document. Your task is to extract two specific fields from it: 'Account No' and 'Denomination' (Amount). Please follow these strict formatting rules:
+Data Cleaning: For the amount/denomination, remove the suffix '.00 Cr.' and any other extra text. For example, '5,000.00 Cr.' must be converted to '5000' (no commas if possible, just the number).
+Column Structure: Create a structured dataset with two columns ONLY:
+Column A Name: Account_No
+Column B Name: Amount
+Leading Zero Protection: It is critical that all account numbers in the 'Account_No' column are preserved exactly as they appear, keeping all leading zeros.
+Output the extracted data STRICTLY in standard CSV format, with header Account_No,Amount.
+Do not include any markdown formatting, conversational text, or explanations. Only return the raw CSV text.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-flash-latest",
         contents: {
           parts: [
             {
@@ -221,12 +212,128 @@ Output only the numbered list. No conversational text.`;
         },
       });
 
-      let text = response.text;
-      if (!text) {
+      let csvText = response.text;
+      if (!csvText) {
           throw new Error('No data extracted');
       }
       
-      setTextResult(text.trim());
+      // Strip markdown code blocks if the model includes them
+      csvText = csvText.replace(/```csv\n?/gi, '').replace(/```\n?/g, '').trim();
+
+      // 3. Parse CSV
+      const results = Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+      });
+
+      if (results.data.length === 0) {
+          throw new Error('No data found in extracted CSV.');
+      }
+
+      setHeaders(Object.keys(results.data[0] as object));
+      setParsedData(results.data);
+      setSuccess('Account and Amount details extracted successfully.');
+
+    } catch (err: any) {
+      const errorMsg = err?.message || String(err);
+      console.error('Error extracting data:', errorMsg);
+      setError('Error extracting data: ' + errorMsg);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const extractGroupingWithAI = async (fileToParse: File) => {
+    setProcessing(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const base64Data = await fileToBase64(fileToParse);
+
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const prompt = `You are a data extraction specialist. Your task is to process a PDF containing financial details.
+
+1. EXTRACTION: Scan the document and extract every "Account Number" and its corresponding "Amount". Ignore all other data.
+2. OUTPUT FORMAT: Output the results STRICTLY in standard CSV format without any markdown blocks or conversational text.
+3. HEADERS: The first row MUST be exactly "Account Number,Amount".
+4. RULES: Do not include commas in the amount values (e.g. use 1000.50 instead of 1,000.50).
+5. LEAD ZEROS: You MUST preserve all leading zeros on Account Numbers exactly as shown in the document.`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-flash-latest",
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                data: base64Data,
+                mimeType: "application/pdf",
+              },
+            },
+            {
+              text: prompt,
+            },
+          ],
+        },
+      });
+
+      let csvText = response.text;
+      if (!csvText) {
+          throw new Error('No data extracted');
+      }
+      
+      csvText = csvText.replace(/```csv\n?/gi, '').replace(/```\n?/g, '').trim();
+
+      const results = Papa.parse(csvText, {
+          header: true,
+          skipEmptyLines: true,
+      });
+
+      if (results.data.length === 0) {
+          throw new Error('No data found in extracted CSV.');
+      }
+
+      const items = results.data as Record<string, any>[];
+      const accountCol = "Account Number";
+      const amountCol = "Amount";
+
+      const groups: string[][] = [];
+      let currentGroup: string[] = [];
+      let currentSum = 0;
+
+      for (const row of items) {
+         let accNoRaw = String(row[accountCol] || '').trim();
+         let accNo = accNoRaw.startsWith('="') && accNoRaw.endsWith('"') ? accNoRaw.slice(2, -1) : accNoRaw;
+         let amountStr = String(row[amountCol] || '0').replace(/[^0-9.-]+/g, '');
+         let amount = parseFloat(amountStr) || 0;
+
+         if (accNo && amount > 0) {
+             if (amount >= 20000) {
+                 // Push as its own group
+                 groups.push([accNo]);
+             } else if (currentSum + amount <= 20000) {
+                 currentGroup.push(accNo);
+                 currentSum += amount;
+             } else {
+                 // Start new group
+                 if (currentGroup.length > 0) {
+                     groups.push([...currentGroup]);
+                 }
+                 currentGroup = [accNo];
+                 currentSum = amount;
+             }
+         }
+      }
+      
+      if (currentGroup.length > 0) {
+          groups.push(currentGroup);
+      }
+
+      let groupText = '';
+      groups.forEach((group, index) => {
+          groupText += `${index + 1}. ${group.join(', ')}\n`;
+      });
+
+      setTextResult(groupText.trim());
       setSuccess('Accounts grouped successfully into lots.');
 
     } catch (err: any) {
@@ -250,7 +357,7 @@ Output only the numbered list. No conversational text.`;
         e.target.value = '';
         return;
       }
-      if (conversionType === 'pdf-to-csv' || conversionType === 'ai-pdf-extraction' || conversionType === 'ai-account-extraction' || conversionType === 'ai-lot-grouping' || conversionType === 'ai-deposit-extraction') {
+      if (conversionType === 'pdf-to-csv' || conversionType === 'ai-pdf-extraction' || conversionType === 'ai-account-extraction' || conversionType === 'ai-account-amount-extraction' || conversionType === 'ai-lot-grouping' || conversionType === 'ai-deposit-extraction') {
         if (selectedFile.type !== 'application/pdf' && !selectedFile.name.endsWith('.pdf')) {
           setError('Please select a valid PDF file.');
           setFile(null);
@@ -277,6 +384,8 @@ Output only the numbered list. No conversational text.`;
       extractDataWithAI(file);
     } else if (conversionType === 'ai-account-extraction') {
       extractAccountDetailsWithAI(file);
+    } else if (conversionType === 'ai-account-amount-extraction') {
+      extractAccountAmountWithAI(file);
     } else if (conversionType === 'ai-lot-grouping') {
       extractGroupingWithAI(file);
     } else if (conversionType === 'ai-deposit-extraction') {
@@ -292,22 +401,18 @@ Output only the numbered list. No conversational text.`;
       const base64Data = await fileToBase64(fileToParse);
 
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-      const prompt = `You are a data extraction tool. I will provide pdf containing various deposit details. Ignore all irrelevant information like account numbers, dates, or ID numbers, RD Total Deposit Amount etc.
+      const prompt = `You are a highly accurate data extraction tool. I will provide you with a PDF document. Your job is to extract the main data table from the document.
 
-Your tasks:
-
-1. Extract only the 'E-Banking Ref No' and 'Total Deposit Amount' for each entry on the bottom of pdf.
-2. List them clearly.
-3. At the very bottom, calculate and display the Total Number of References and the Grand Total Deposit Amount.
-
-Do not include any other conversational text.
-
-Output the results STRICTLY in standard CSV format so it can be downloaded as a table. Use these columns: "E-Banking Ref No", "Total Deposit Amount".
-For the final summary row, put "Total References: X" in the first column, and the Grand Total in the second column, formatted with the "Rs." symbol (e.g., "Rs. 20,000").
-Add one final row after the summary row where the first column is "Amount in words:" and the second column is the Grand Total amount spelled out in English words (e.g., "Rupees Twenty Thousand Only").`;
+CRITICAL INSTRUCTIONS:
+- You MUST preserve the EXACT sequence and order of the rows as they appear in the original document from top to bottom.
+- IMPORTANT: You MUST preserve any leading zeros in all numbers (e.g., output "0123" instead of "123"). Do not let numbers be truncated.
+- Output the extracted data STRICTLY in standard CSV format.
+- Use THESE EXACT column headers: "E-Banking Ref No","Total Deposit Amount".
+- Do not include any summary, "Total", "Grand Total", or aggregated rows. Only extract the individual deposit transactions themselves.
+- Do not include any markdown formatting, conversational text, or explanations. Only return the raw CSV text.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3-flash-preview",
         contents: {
           parts: [
             {
@@ -333,15 +438,66 @@ Add one final row after the summary row where the first column is "Amount in wor
       const results = Papa.parse(csvText, {
           header: true,
           skipEmptyLines: true,
-          dynamicTyping: true,
       });
 
       if (results.data.length === 0) {
           throw new Error('No data found in extracted CSV.');
       }
 
-      setHeaders(Object.keys(results.data[0] as object));
-      setParsedData(results.data);
+      const items = results.data as Record<string, any>[];
+      let grandTotal = 0;
+      let totalRefs = 0;
+      const cleanData: any[] = [];
+      const eBankingCol = "E-Banking Ref No";
+      const amountCol = "Total Deposit Amount";
+
+      for (const row of items) {
+         const ref = String(row[eBankingCol] || '').trim();
+         const amountStr = String(row[amountCol] || '0').replace(/[^0-9.-]+/g, '');
+         const amount = parseFloat(amountStr) || 0;
+         
+         if (ref && amount > 0) {
+            grandTotal += amount;
+            totalRefs += 1;
+            cleanData.push({
+               [eBankingCol]: ref,
+               [amountCol]: amount.toFixed(2)
+            });
+         }
+      }
+
+      // Add the summary rows at the bottom as requested
+      if (totalRefs > 0) {
+        cleanData.push({
+          [eBankingCol]: `Total References: ${totalRefs}`,
+          [amountCol]: `Rs. ${grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
+        });
+
+        const numberToWords = (num: number): string => {
+          const a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+          const b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+          if ((num = Math.floor(num)) === 0) return 'Zero';
+          if (num.toString().length > 9) return 'overflow';
+          const n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+          if (!n) return ''; 
+          let str = '';
+          str += (Number(n[1]) != 0) ? (a[Number(n[1])] || b[(n[1] as any)[0] as any] + ' ' + a[(n[1] as any)[1] as any]) + 'Crore ' : '';
+          str += (Number(n[2]) != 0) ? (a[Number(n[2])] || b[(n[2] as any)[0] as any] + ' ' + a[(n[2] as any)[1] as any]) + 'Lakh ' : '';
+          str += (Number(n[3]) != 0) ? (a[Number(n[3])] || b[(n[3] as any)[0] as any] + ' ' + a[(n[3] as any)[1] as any]) + 'Thousand ' : '';
+          str += (Number(n[4]) != 0) ? (a[Number(n[4])] || b[(n[4] as any)[0] as any] + ' ' + a[(n[4] as any)[1] as any]) + 'Hundred ' : '';
+          str += (Number(n[5]) != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[(n[5] as any)[0] as any] + ' ' + a[(n[5] as any)[1] as any]) : '';
+          return str.trim();
+        };
+
+        const spellOut = numberToWords(grandTotal);
+        cleanData.push({
+           [eBankingCol]: "Amount in words:",
+           [amountCol]: `${spellOut} Rupees Only`
+        });
+      }
+
+      setHeaders([eBankingCol, amountCol]);
+      setParsedData(cleanData);
       setSuccess('Deposits extracted successfully.');
 
     } catch (err: any) {
@@ -507,7 +663,6 @@ Add one final row after the summary row where the first column is "Amount in wor
       const results = Papa.parse(fullText, {
         header: false,
         skipEmptyLines: true,
-        dynamicTyping: true,
       });
 
       if (results.errors.length > 0) {
@@ -592,7 +747,17 @@ Add one final row after the summary row where the first column is "Amount in wor
   const downloadAsCSV = () => {
     if (parsedData.length === 0) return;
     
-    const csvContent = Papa.unparse(parsedData);
+    // Clean data from `="value"` format before converting
+    const cleanData = parsedData.map(row => {
+      const cleanRow: any = {};
+      Object.keys(row).forEach(key => {
+        const val = row[key];
+        cleanRow[key] = typeof val === 'string' ? val.replace(/^="|"$/g, '') : val;
+      });
+      return cleanRow;
+    });
+
+    const csvContent = Papa.unparse(cleanData);
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -608,8 +773,22 @@ Add one final row after the summary row where the first column is "Amount in wor
   const downloadAsText = () => {
     if (parsedData.length === 0) return;
     
-    // Convert to tab-separated or formatted text
-    const textContent = Papa.unparse(parsedData, { delimiter: '\t' });
+    // Clean data from `="value"` format before converting
+    const cleanData = parsedData.map(row => {
+      const cleanRow: any = {};
+      Object.keys(row).forEach(key => {
+        const val = row[key];
+        cleanRow[key] = typeof val === 'string' ? val.replace(/^="|"$/g, '') : val;
+      });
+      return cleanRow;
+    });
+
+    // Convert to tab-separated text without extra quotes
+    const headerLine = headers.join('\t');
+    const dataLines = cleanData.map(row => 
+      headers.map(header => row[header] || '').join('\t')
+    );
+    const textContent = [headerLine, ...dataLines].join('\n');
     
     const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8;' });
     const link = document.createElement('a');
@@ -620,6 +799,36 @@ Add one final row after the summary row where the first column is "Amount in wor
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const downloadAsXlsx = () => {
+    if (parsedData.length === 0) return;
+    
+    // Clean data from `="value"` format before converting
+    const cleanData = parsedData.map((row: any) => {
+      const cleanRow: any = {};
+      Object.keys(row).forEach(key => {
+        const val = row[key];
+        // Ensure values remain strings so leading zeroes are preserved
+        cleanRow[key] = typeof val === 'string' ? val.replace(/^="|"$/g, '') : val;
+      });
+      return cleanRow;
+    });
+
+    // Create a worksheet explicitly using array of arrays to preserve strings
+    const dataArray: any[][] = [headers];
+    cleanData.forEach(row => {
+      dataArray.push(headers.map(header => row[header] || ''));
+    });
+    
+    const worksheet = XLSX.utils.aoa_to_sheet(dataArray);
+    
+    // Create a workbook and append the sheet
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+    
+    // Trigger download
+    XLSX.writeFile(workbook, `${file?.name.replace(/\.(csv|pdf)$/i, '') || 'converted'}.xlsx`);
   };
 
   const downloadAsPDF = async () => {
@@ -668,7 +877,10 @@ Add one final row after the summary row where the first column is "Amount in wor
       currentY += 10;
     }
 
-    const rows = parsedData.map(row => headers.map(header => row[header] || ''));
+    const rows = parsedData.map(row => headers.map(header => {
+      const val = row[header];
+      return typeof val === 'string' ? val.replace(/^="|"$/g, '') : (val || '');
+    }));
     
     autoTable(doc, {
       head: [headers],
@@ -700,6 +912,31 @@ Add one final row after the summary row where the first column is "Amount in wor
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const downloadXlsxResult = () => {
+    if (!textResult) return;
+    
+    const lines = textResult.split('\n');
+    const data: any[][] = [['Lot ID', 'Account Number']];
+    
+    lines.forEach((line, index) => {
+      const match = line.match(/^\d+\.\s+(.*)$/);
+      if (match) {
+        const accounts = match[1].split(',').map(a => a.trim());
+        const lotId = index + 1;
+        accounts.forEach(acc => {
+          const cleanAcc = acc.replace(/^="|"$/g, '').replace(/[<>&'"]/g, '');
+          data.push([lotId, cleanAcc]);
+        });
+      }
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Lots");
+    
+    XLSX.writeFile(workbook, `${file?.name.replace(/\.(csv|pdf)$/i, '') || 'grouped'}_lots.xlsx`);
   };
 
   return (
@@ -824,6 +1061,28 @@ Add one final row after the summary row where the first column is "Amount in wor
                 </div>
                 {conversionType === 'ai-account-extraction' && (
                   <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
+                )}
+              </button>
+
+              <button
+                onClick={() => { setConversionType('ai-account-amount-extraction'); clearFile(); }}
+                className={`group/btn relative flex items-center justify-between px-6 py-5 rounded-2xl text-sm font-black transition-all overflow-hidden border-2 ${
+                  conversionType === 'ai-account-amount-extraction' 
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-xl shadow-indigo-500/20 scale-[1.02]' 
+                    : 'bg-white text-slate-600 hover:bg-indigo-50 border-slate-100 hover:border-indigo-200'
+                }`}
+              >
+                <div className="flex items-center gap-4 relative z-10">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${conversionType === 'ai-account-amount-extraction' ? 'bg-indigo-500/20' : 'bg-slate-100 group-hover/btn:bg-indigo-100'}`}>
+                    <FileText className={`w-5 h-5 ${conversionType === 'ai-account-amount-extraction' ? 'text-indigo-500' : 'text-slate-400 group-hover/btn:text-indigo-500'}`} />
+                  </div>
+                  <span className="uppercase tracking-wider">Extract Acc. & Amount</span>
+                </div>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${conversionType === 'ai-account-amount-extraction' ? 'bg-indigo-500 text-white scale-110' : 'bg-slate-100 opacity-0'}`}>
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                {conversionType === 'ai-account-amount-extraction' && (
+                  <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-indigo-500"></div>
                 )}
               </button>
 
@@ -988,43 +1247,29 @@ Add one final row after the summary row where the first column is "Amount in wor
                       </div>
                       
                       <div className="flex items-center gap-3">
-                        {conversionType === 'pdf-to-csv' || conversionType === 'ai-pdf-extraction' || conversionType === 'ai-account-extraction' || conversionType === 'ai-deposit-extraction' ? (
-                          <div className="flex gap-3">
-                            <button
-                                onClick={downloadAsCSV}
-                                className="flex items-center gap-3 px-8 py-4 bg-gradient-brand text-white rounded-2xl font-black hover:opacity-90 transition-all shadow-premium hover-lift uppercase tracking-widest text-xs"
-                            >
-                                <FileDown className="w-5 h-5" />
-                                CSV
-                            </button>
-                            {conversionType === 'ai-deposit-extraction' && (
-                                <button
-                                    onClick={downloadAsPDF}
-                                    className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-slate-800 transition-all shadow-premium hover-lift uppercase tracking-widest text-xs"
-                                >
-                                    <FileText className="w-5 h-5" />
-                                    PDF
-                                </button>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="flex gap-3">
-                            <button
+                        <div className="flex gap-3">
+                          <button
+                              onClick={downloadAsCSV}
+                              className="flex items-center gap-3 px-6 py-4 bg-white border-2 border-slate-100 text-slate-700 rounded-2xl font-black hover:bg-slate-50 transition-all shadow-sm hover-lift uppercase tracking-widest text-[10px]"
+                          >
+                              <FileCode2 className="w-4 h-4 text-brand" />
+                              CSV
+                          </button>
+                          <button
+                              onClick={downloadAsXlsx}
+                              className="flex items-center gap-3 px-6 py-4 bg-white border-2 border-slate-100 text-slate-700 rounded-2xl font-black hover:bg-slate-50 transition-all shadow-sm hover-lift uppercase tracking-widest text-[10px]"
+                          >
+                              <FileSpreadsheet className="w-4 h-4 text-success" />
+                              Excel
+                          </button>
+                          <button
                               onClick={downloadAsPDF}
                               className="flex items-center gap-3 px-8 py-4 bg-gradient-brand text-white rounded-2xl font-black hover:opacity-90 transition-all shadow-premium hover-lift uppercase tracking-widest text-xs"
-                            >
+                          >
                               <FileDown className="w-5 h-5" />
                               PDF
-                            </button>
-                            <button
-                              onClick={downloadAsText}
-                              className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-slate-800 transition-all shadow-premium hover-lift uppercase tracking-widest text-xs"
-                            >
-                              <FileText className="w-5 h-5" />
-                              Text
-                            </button>
-                          </div>
-                        )}
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -1051,7 +1296,7 @@ Add one final row after the summary row where the first column is "Amount in wor
                                       : 'text-slate-700 group-hover/row:text-brand'
                                   }`}
                                 >
-                                  {row[header]}
+                                  {typeof row[header] === 'string' ? row[header].replace(/^="|"$/g, '') : row[header]}
                                 </td>
                               ))}
                             </tr>
@@ -1071,7 +1316,7 @@ Add one final row after the summary row where the first column is "Amount in wor
                                 <span className={`text-sm font-bold ${
                                   header.toLowerCase().includes('amount') ? 'text-success' : 'text-slate-900'
                                 }`}>
-                                  {row[header]}
+                                  {typeof row[header] === 'string' ? row[header].replace(/^="|"$/g, '') : row[header]}
                                 </span>
                               </div>
                             ))}
@@ -1112,6 +1357,13 @@ Add one final row after the summary row where the first column is "Amount in wor
                         >
                           <FileDown className="w-4 h-4" />
                           Download .txt
+                        </button>
+                        <button
+                          onClick={downloadXlsxResult}
+                          className="flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-[10px]"
+                        >
+                          <FileCode2 className="w-4 h-4" />
+                          Download .xlsx
                         </button>
                         <button
                           onClick={copyTextResult}
@@ -1184,7 +1436,7 @@ Add one final row after the summary row where the first column is "Amount in wor
                             className="flex items-center gap-3 px-6 py-3 bg-brand text-white rounded-2xl font-black hover:bg-brand/90 transition-all uppercase tracking-widest text-[10px] shadow-lg hover:shadow-brand/20 shadow-brand/10"
                           >
                             <ListChecks className="w-4 h-4" />
-                            Send to Lot Maker CheckLists
+                            Send to CheckLists
                           </button>
                         )}
                       </div>

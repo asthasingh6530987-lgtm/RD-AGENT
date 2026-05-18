@@ -6,16 +6,9 @@ import Papa from 'papaparse';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { createBatches, Account, Batch } from '../utils/batching';
-import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, IndianRupee, Clock, RefreshCw, X, Trash2, Download, ChevronLeft, ChevronRight, Search, ArrowUpDown, FileDown } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, AlertCircle, Loader2, IndianRupee, Clock, RefreshCw, X, Trash2, Download, ChevronLeft, ChevronRight, Search, ArrowUpDown, FileDown, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import ConfirmationModal from './ConfirmationModal';
-
-export const getMillis = (createdAt: any) => {
-  if (!createdAt) return 0;
-  if (typeof createdAt.toMillis === 'function') return createdAt.toMillis();
-  if (createdAt.seconds) return createdAt.seconds * 1000;
-  return 0;
-};
 
 interface DashboardProps {
   user: User;
@@ -104,17 +97,6 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
 
   // Fetch batches
   useEffect(() => {
-    // Check local cache first
-    const cachedBatches = localStorage.getItem(`saved_batches_${user.uid}`);
-    if (cachedBatches) {
-      try {
-        setSavedBatches(JSON.parse(cachedBatches));
-        setLoadingBatches(false); // Stop loading early
-      } catch (e) {
-        console.error("Local storage error:", e);
-      }
-    }
-
     const q = query(
       collection(db, 'batches'),
       where('agentId', '==', user.uid),
@@ -128,7 +110,6 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
       })) as SavedBatch[];
       setSavedBatches(batchesData);
       setLoadingBatches(false);
-      localStorage.setItem(`saved_batches_${user.uid}`, JSON.stringify(batchesData));
     }, (err) => {
       console.error("Error fetching batches:", err);
       setError("Failed to load your batches. Please check your permissions.");
@@ -198,8 +179,13 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
               throw new Error(`Account ${accountNo} has amount ₹${amount} which exceeds the ₹20,000 limit.`);
             }
 
+            let cleanAccountNo = String(accountNo).trim();
+            if (cleanAccountNo.startsWith('="') && cleanAccountNo.endsWith('"')) {
+              cleanAccountNo = cleanAccountNo.slice(2, -1);
+            }
+
             accounts.push({ 
-              accountNo: String(accountNo).trim(), 
+              accountNo: cleanAccountNo, 
               amount,
               accountName: accountName ? String(accountName).trim() : undefined,
               monthPaidUpto: monthPaidUpto ? String(monthPaidUpto).trim() : undefined,
@@ -382,14 +368,17 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
   const handleExportBatch = (batch: SavedBatch, format: 'detailed' | 'portal' | 'summary' = 'detailed') => {
     const csvData: any[] = [];
     batch.accounts.forEach(acc => {
+      // Add normal string notation
+      const formattedAccNo = acc.accountNo ? String(acc.accountNo) : '';
+      
       if (format === 'portal' || format === 'summary') {
         csvData.push({
-          'Account No': acc.accountNo,
+          'Account No': formattedAccNo,
           'Amount': acc.amount
         });
       } else {
         csvData.push({
-          'Account No': acc.accountNo,
+          'Account No': formattedAccNo,
           'Account Name': acc.accountName || '',
           'Month Paid Upto': acc.monthPaidUpto || '',
           'Next RD Installment Due Date': acc.nextDueDate || '',
@@ -456,7 +445,7 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
 
     const tableData = batch.accounts.map((acc, idx) => [
       idx + 1,
-      acc.accountNo,
+      acc.accountNo.replace(/^="|"$/g, ''),
       acc.accountName || '-',
       acc.monthPaidUpto || '-',
       acc.nextDueDate || '-',
@@ -523,7 +512,7 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
       
       const tableData = batch.accounts.map((acc, idx) => [
         idx + 1,
-        acc.accountNo,
+        acc.accountNo.replace(/^="|"$/g, ''),
         acc.accountName || '-',
         acc.monthPaidUpto || '-',
         acc.nextDueDate || '-',
@@ -613,15 +602,18 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
     savedBatches.forEach(batch => {
       const batchIdentifier = batch.referenceNumber || batch.id;
       batch.accounts.forEach(acc => {
+        // Add normal string notation
+        const formattedAccNo = acc.accountNo ? String(acc.accountNo) : '';
+
         if (format === 'portal' || format === 'summary') {
           csvData.push({
-            'Account No': acc.accountNo,
+            'Account No': formattedAccNo,
             'Amount': acc.amount
           });
         } else {
           csvData.push({
             'Batch Reference': batchIdentifier,
-            'Account No': acc.accountNo,
+            'Account No': formattedAccNo,
             'Account Name': acc.accountName || '',
             'Month Paid Upto': acc.monthPaidUpto || '',
             'Next RD Installment Due Date': acc.nextDueDate || '',
@@ -683,9 +675,7 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
     });
 
     if (sortOption === 'date') {
-      filtered.sort((a, b) => {
-        return getMillis(b.createdAt) - getMillis(a.createdAt);
-      });
+      filtered.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
     } else if (sortOption === 'status') {
       filtered.sort((a, b) => a.status.localeCompare(b.status));
     } else if (sortOption === 'amount') {
@@ -722,21 +712,32 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
             Manage your RD account batches and collections
           </p>
         </div>
-        <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
-          <button
-            onClick={() => setShowManualAdd(!showManualAdd)}
-            className="flex-1 sm:flex-none justify-center px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm hover:shadow-md hover-lift flex items-center gap-2"
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
+            <button
+              onClick={() => setShowManualAdd(!showManualAdd)}
+              className="flex-1 sm:flex-none justify-center px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm hover:shadow-md hover-lift flex items-center gap-2"
+            >
+              <FileText className="w-4 h-4" />
+              Manual Entry
+            </button>
+            <button
+              className="flex-1 sm:flex-none justify-center px-6 py-3 bg-brand text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand/90 transition-all shadow-lg shadow-brand/20 hover:shadow-brand/30 hover-lift flex items-center gap-2"
+              onClick={() => document.getElementById('file-upload')?.click()}
+            >
+              <Upload className="w-4 h-4" />
+              Upload CSV
+            </button>
+          </div>
+          <a
+            href="https://dopagent.indiapost.gov.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[10px] font-black text-brand hover:text-indigo-600 transition-colors uppercase tracking-widest underline decoration-brand/30 hover:decoration-indigo-600 flex items-center gap-1"
           >
-            <FileText className="w-4 h-4" />
-            Manual Entry
-          </button>
-          <button
-            className="flex-1 sm:flex-none justify-center px-6 py-3 bg-brand text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-brand/90 transition-all shadow-lg shadow-brand/20 hover:shadow-brand/30 hover-lift flex items-center gap-2"
-            onClick={() => document.getElementById('file-upload')?.click()}
-          >
-            <Upload className="w-4 h-4" />
-            Upload CSV
-          </button>
+            Open DOP Portal
+            <ExternalLink className="w-3 h-3" />
+          </a>
         </div>
       </div>
 
@@ -1121,11 +1122,11 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                         <td className="px-10 py-10">
                           <div className="flex flex-col">
                             <span className="text-base font-black text-slate-900 tracking-tight group-hover:text-brand transition-colors">
-                              {getMillis(batch.createdAt) ? new Date(getMillis(batch.createdAt)).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
+                              {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
                             </span>
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5 flex items-center gap-2">
                               <Clock className="w-3 h-3" />
-                              {getMillis(batch.createdAt) ? new Date(getMillis(batch.createdAt)).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                              {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
                             </span>
                           </div>
                         </td>
@@ -1210,11 +1211,11 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <span className="text-sm font-black text-slate-900 tracking-tight">
-                          {getMillis(batch.createdAt) ? new Date(getMillis(batch.createdAt)).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
+                          {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
                         </span>
                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-1">
                           <Clock className="w-3 h-3" />
-                          {getMillis(batch.createdAt) ? new Date(getMillis(batch.createdAt)).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          {batch.createdAt?.toMillis ? new Date(batch.createdAt.toMillis()).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                       </div>
                       <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[9px] font-black uppercase tracking-widest shadow-sm ${getStatusColor(batch.status)}`}>
@@ -1487,7 +1488,7 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                           {selectedBatch.accounts.map((acc, idx) => (
                             <tr key={`${idx}-desktop`} className="hover:bg-gold/5 transition-all group/row cursor-default">
                               <td className="px-8 py-5 text-slate-400 font-black text-[10px]">{String(idx + 1).padStart(2, '0')}</td>
-                              <td className="px-8 py-5 font-mono text-slate-900 font-black tracking-tight group-hover/row:text-brand transition-colors">{acc.accountNo}</td>
+                              <td className="px-8 py-5 font-mono text-slate-900 font-black tracking-tight group-hover/row:text-brand transition-colors">{acc.accountNo.replace(/^="|"$/g, '')}</td>
                               <td className="px-8 py-5 text-slate-700 font-bold">{acc.accountName || '-'}</td>
                               <td className="px-8 py-5">
                                 <span className="px-2.5 py-1 bg-info/10 text-info rounded-lg text-[9px] font-black uppercase tracking-widest border border-info/10">
@@ -1515,7 +1516,7 @@ export default function Dashboard({ user, addToast }: DashboardProps) {
                           <div className="flex justify-between items-start mb-3">
                             <div className="flex items-center gap-2">
                               <span className="text-slate-400 font-black text-[10px]">{String(idx + 1).padStart(2, '0')}</span>
-                              <span className="font-mono text-slate-900 font-black tracking-tight">{acc.accountNo}</span>
+                              <span className="font-mono text-slate-900 font-black tracking-tight">{acc.accountNo.replace(/^="|"$/g, '')}</span>
                             </div>
                             <span className="font-black text-success text-base">₹{acc.amount.toLocaleString('en-IN')}</span>
                           </div>

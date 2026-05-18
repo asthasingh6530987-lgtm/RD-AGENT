@@ -141,7 +141,7 @@ export default function AccountDetailsModal({
               <div>
                 <h2 className="text-xl font-bold text-white">{customer.accountName || 'Account Details'}</h2>
                 <div className="flex items-center gap-3 mt-1">
-                  <p className="text-sm font-medium text-blue-100">#{customer.accountNo}</p>
+                  <p className="text-sm font-medium text-blue-100">#{customer.accountNo.replace(/^="|"$/g, '')}</p>
                   <div className="flex items-center gap-2">
                     <button className="p-1.5 bg-blue-500/50 hover:bg-blue-500 rounded-full text-white transition-colors">
                       <Phone className="w-3.5 h-3.5" />
