@@ -20,6 +20,7 @@ interface Customer {
   maturityTime?: string;
   totalDeposit?: number;
   collectionAmount?: number;
+  openedOn?: string;
 }
 
 interface CollectionRecord {
@@ -42,6 +43,10 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
   const [monthlyCollections, setMonthlyCollections] = useState<CollectionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [showCollectedOnly, setShowCollectedOnly] = useState(false);
+  const [calendarViewDate, setCalendarViewDate] = useState<Date>(new Date(selectedDate));
+  const [highlightedDates, setHighlightedDates] = useState<string[]>([]);
   
   // Add Customer Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -50,6 +55,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
   const [newAmount, setNewAmount] = useState('');
   const [newMobileNumber, setNewMobileNumber] = useState('');
   const [newMaturityTime, setNewMaturityTime] = useState('5 Year');
+  const [newOpenedOn, setNewOpenedOn] = useState('');
   const [newTotalDeposit, setNewTotalDeposit] = useState('');
   const [newCollectionAmount, setNewCollectionAmount] = useState('');
   const [addingCustomer, setAddingCustomer] = useState(false);
@@ -77,6 +83,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
   const [editAmount, setEditAmount] = useState('');
   const [editMobileNumber, setEditMobileNumber] = useState('');
   const [editMaturityTime, setEditMaturityTime] = useState('');
+  const [editOpenedOn, setEditOpenedOn] = useState('');
   const [editTotalDeposit, setEditTotalDeposit] = useState('');
   const [editCollectionAmount, setEditCollectionAmount] = useState('');
   const [savingEdit, setSavingEdit] = useState(false);
@@ -93,6 +100,30 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
   useEffect(() => {
     fetchData();
   }, [user.uid, selectedDate]);
+
+  useEffect(() => {
+    const fetchHighlights = async () => {
+      try {
+        const year = calendarViewDate.getFullYear();
+        const month = String(calendarViewDate.getMonth() + 1).padStart(2, '0');
+        const startOfMonth = `${year}-${month}-01`;
+        const endOfMonth = `${year}-${month}-31`;
+        
+        const q = query(
+          collection(db, 'collections'),
+          where('agentId', '==', user.uid),
+          where('collectionDate', '>=', startOfMonth),
+          where('collectionDate', '<=', endOfMonth)
+        );
+        const snap = await getDocs(q);
+        const dates = snap.docs.map(doc => doc.data().collectionDate);
+        setHighlightedDates(Array.from(new Set(dates)));
+      } catch (e) {
+        console.error("Error fetching highlights:", e);
+      }
+    };
+    fetchHighlights();
+  }, [user.uid, calendarViewDate, refreshTrigger]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -154,6 +185,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
         defaultAmount: Number(newAmount),
         mobileNumber: newMobileNumber,
         maturityTime: newMaturityTime,
+        openedOn: newOpenedOn || undefined,
         totalDeposit: Number(newTotalDeposit) || 0,
         collectionAmount: Number(newCollectionAmount) || 0,
         isFavorite: false,
@@ -167,6 +199,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
         defaultAmount: Number(newAmount),
         mobileNumber: newMobileNumber,
         maturityTime: newMaturityTime,
+        openedOn: newOpenedOn || undefined,
         totalDeposit: Number(newTotalDeposit) || 0,
         collectionAmount: Number(newCollectionAmount) || 0,
         isFavorite: false
@@ -179,6 +212,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
       setNewAmount('');
       setNewMobileNumber('');
       setNewMaturityTime('5 Year');
+      setNewOpenedOn('');
       setNewTotalDeposit('');
       setNewCollectionAmount('');
       addToast("Account added successfully", "success");
@@ -206,6 +240,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
         defaultAmount: Number(editAmount),
         mobileNumber: editMobileNumber,
         maturityTime: editMaturityTime,
+        openedOn: editOpenedOn || undefined,
         totalDeposit: Number(editTotalDeposit) || 0,
         collectionAmount: Number(editCollectionAmount) || 0,
       });
@@ -219,6 +254,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
               defaultAmount: Number(editAmount),
               mobileNumber: editMobileNumber,
               maturityTime: editMaturityTime,
+              openedOn: editOpenedOn || undefined,
               totalDeposit: Number(editTotalDeposit) || 0,
               collectionAmount: Number(editCollectionAmount) || 0,
             } 
@@ -232,6 +268,24 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
       addToast("Failed to update account", "error");
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const updateInstallmentMonths = (customer: Customer, months: number) => {
+    const pendingCollection = pendingCollections.find(c => c.accountNo === customer.accountNo);
+    if (pendingCollection) {
+      setPendingCollections(pendingCollections.map(p => 
+        p.accountNo === customer.accountNo ? { ...p, installmentMonths: months, amount: customer.defaultAmount * months } : p
+      ));
+    } else {
+      const newRecord: CollectionRecord = {
+        id: 'pending-' + customer.accountNo,
+        accountNo: customer.accountNo,
+        amount: customer.defaultAmount * months,
+        collectionDate: selectedDate,
+        installmentMonths: months
+      };
+      setPendingCollections([...pendingCollections, newRecord]);
     }
   };
 
@@ -276,21 +330,35 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
     }
   };
 
+  const getNextMonthDate = (startDateStr: string, addMonths: number) => {
+    const [y, m, d] = startDateStr.split('-').map(Number);
+    const date = new Date(y, m - 1 + addMonths, d);
+    const yStr = date.getFullYear();
+    const mStr = String(date.getMonth() + 1).padStart(2, '0');
+    const dStr = String(date.getDate()).padStart(2, '0');
+    return `${yStr}-${mStr}-${dStr}`;
+  };
+
   const saveAllCollections = async () => {
     if (pendingCollections.length === 0) return;
     setLoading(true);
     try {
       const batch = writeBatch(db);
       pendingCollections.forEach(c => {
-        const docRef = doc(collection(db, 'collections'));
-        batch.set(docRef, {
-          agentId: user.uid,
-          accountNo: c.accountNo,
-          amount: c.amount,
-          collectionDate: c.collectionDate,
-          installmentMonths: c.installmentMonths,
-          createdAt: serverTimestamp()
-        });
+        const months = c.installmentMonths || 1;
+        const amountPerMonth = Number(c.amount) / months;
+        for (let i = 0; i < months; i++) {
+          const docRef = doc(collection(db, 'collections'));
+          batch.set(docRef, {
+            agentId: user.uid,
+            accountNo: c.accountNo,
+            amount: amountPerMonth,
+            collectionDate: getNextMonthDate(c.collectionDate, i),
+            installmentMonths: 1,
+            originalMonths: months, // Keep a reference
+            createdAt: serverTimestamp()
+          });
+        }
       });
       await batch.commit();
       
@@ -385,17 +453,26 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
 
     setSavingManual(true);
     try {
-      await addDoc(collection(db, 'collections'), {
-        agentId: user.uid,
-        accountNo: manualAccountNo,
-        amount: Number(manualAmount),
-        collectionDate: selectedDate,
-        installmentMonths: Number(manualMonths),
-        createdAt: serverTimestamp()
-      });
+      const months = Number(manualMonths);
+      const amountPerMonth = Number(manualAmount) / months;
+      
+      const batch = writeBatch(db);
+      for (let i = 0; i < months; i++) {
+        const docRef = doc(collection(db, 'collections'));
+        batch.set(docRef, {
+          agentId: user.uid,
+          accountNo: manualAccountNo,
+          amount: amountPerMonth,
+          collectionDate: getNextMonthDate(selectedDate, i),
+          installmentMonths: 1,
+          originalMonths: months,
+          createdAt: serverTimestamp()
+        });
+      }
+      await batch.commit();
 
       // If this account exists in customers, we might want to update its name if it was empty
-      const existingCustomer = customers.find(c => c.accountNo === manualAccountNo);
+      const existingCustomer = customers.find(c => c.accountNo.replace(/^="|"$/g, '') === manualAccountNo.replace(/^="|"$/g, ''));
       if (existingCustomer && !existingCustomer.accountName && manualAccountName) {
         const { updateDoc } = await import('firebase/firestore');
         await updateDoc(doc(db, 'customers', existingCustomer.id), {
@@ -423,21 +500,26 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
 
     setProcessingAccounts(prev => new Set(prev).add(customer.accountNo));
     try {
-      const totalAmount = customer.defaultAmount * months;
-      await addDoc(collection(db, 'collections'), {
-        agentId: user.uid,
-        accountNo: customer.accountNo,
-        amount: totalAmount,
-        collectionDate: selectedDate,
-        installmentMonths: months,
-        createdAt: serverTimestamp()
-      });
+      const batch = writeBatch(db);
+      for (let i = 0; i < months; i++) {
+        const docRef = doc(collection(db, 'collections'));
+        batch.set(docRef, {
+          agentId: user.uid,
+          accountNo: customer.accountNo,
+          amount: customer.defaultAmount,
+          collectionDate: getNextMonthDate(selectedDate, i),
+          installmentMonths: 1,
+          originalMonths: months,
+          createdAt: serverTimestamp()
+        });
+      }
+      await batch.commit();
 
       // Remove from pending if it was there
       setPendingCollections(prev => prev.filter(p => p.accountNo !== customer.accountNo));
       
       await fetchData();
-      addToast(`Collection for ${customer.accountNo} saved`, "success");
+      addToast(`Collection for ${customer.accountNo.replace(/^="|"$/g, '')} saved`, "success");
     } catch (error) {
       console.error("Error saving single collection:", error);
       addToast("Failed to save collection", "error");
@@ -700,10 +782,23 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
       c.accountNo.includes(searchTerm) || 
       c.accountName.toLowerCase().includes(searchTerm.toLowerCase())
     )
+    .filter(c => showFavoritesOnly ? c.isFavorite : true)
+    .filter(c => {
+      if (!showCollectedOnly) return true;
+      return collections.some(col => col.accountNo === c.accountNo);
+    })
     .sort((a, b) => {
+      const aCollected = collections.some(col => col.accountNo === a.accountNo);
+      const bCollected = collections.some(col => col.accountNo === b.accountNo);
+
       // Sort favorites first
       if (a.isFavorite && !b.isFavorite) return -1;
       if (!a.isFavorite && b.isFavorite) return 1;
+
+      // Then sort collected first
+      if (aCollected && !bCollected) return -1;
+      if (!aCollected && bCollected) return 1;
+
       return 0;
     });
 
@@ -828,7 +923,8 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
           <CustomCalendar 
             selectedDate={selectedDate} 
             onSelectDate={setSelectedDate} 
-            highlightedDates={monthlyCollections.map(c => c.collectionDate)} 
+            highlightedDates={highlightedDates} 
+            onViewMonthChange={setCalendarViewDate}
           />
         </div>
       </div>
@@ -977,6 +1073,28 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            <button
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all border shadow-sm ${
+                showFavoritesOnly 
+                  ? 'bg-amber-50 text-amber-600 border-amber-200' 
+                  : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
+              }`}
+            >
+              <Star className={`w-4 h-4 ${showFavoritesOnly ? 'fill-current' : 'text-slate-400'}`} />
+              <span className="hidden sm:inline">Favorites</span>
+            </button>
+            <button
+              onClick={() => setShowCollectedOnly(!showCollectedOnly)}
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl transition-all border shadow-sm ${
+                showCollectedOnly 
+                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200' 
+                  : 'bg-white text-slate-700 hover:bg-slate-50 border-slate-200'
+              }`}
+            >
+              <CheckCircle2 className={`w-4 h-4 ${showCollectedOnly ? 'text-emerald-500' : 'text-slate-400'}`} />
+              <span className="hidden sm:inline">Saved</span>
+            </button>
             {filteredCustomers.length > 0 && (
               <button
                 onClick={handleSelectAll}
@@ -1057,8 +1175,11 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                     {filteredCustomers.map((customer, index) => {
                       const existingCollection = collections.find(c => c.accountNo === customer.accountNo);
                       const isCollected = !!existingCollection;
-                      const isPending = pendingCollections.some(c => c.accountNo === customer.accountNo);
+                      const pendingCollection = pendingCollections.find(c => c.accountNo === customer.accountNo);
+                      const isPending = !!pendingCollection;
                       const isProcessing = processingAccounts.has(customer.accountNo);
+                      const currentMonths = isCollected ? (existingCollection.installmentMonths || 1) : (pendingCollection?.installmentMonths || 1);
+                      const currentAmount = isCollected ? existingCollection.amount : (isPending ? pendingCollection.amount : customer.defaultAmount);
 
                       return (
                         <tr 
@@ -1078,7 +1199,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                               <Star className={`w-4 h-4 ${customer.isFavorite ? 'fill-current' : ''}`} />
                             </button>
                           </td>
-                          <td className="py-3.5 px-4 w-16 cursor-pointer" onClick={() => toggleCollection(customer)}>
+                          <td className="py-3.5 px-4 w-16 cursor-pointer" onClick={() => toggleCollection(customer, currentMonths)}>
                             <button 
                               disabled={isProcessing}
                               className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
@@ -1093,7 +1214,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                                <Circle className="w-5 h-5" />}
                             </button>
                           </td>
-                          <td className="py-3.5 px-4 font-mono text-sm font-medium text-slate-700 cursor-pointer group-hover:text-brand transition-colors" onClick={() => toggleCollection(customer)}>{customer.accountNo.replace(/^="|"$/g, '')}</td>
+                          <td className="py-3.5 px-4 font-mono text-sm font-medium text-slate-700 cursor-pointer group-hover:text-brand transition-colors" onClick={() => toggleCollection(customer, currentMonths)}>{customer.accountNo.replace(/^="|"$/g, '')}</td>
                           <td 
                             className="py-3.5 px-4 text-sm font-semibold text-slate-900 cursor-pointer hover:text-brand transition-colors" 
                             onClick={(e) => {
@@ -1104,14 +1225,14 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                           >
                             {customer.accountName || '-'}
                           </td>
-                          <td className="py-3.5 px-4 text-sm font-bold text-slate-800 cursor-pointer" onClick={() => toggleCollection(customer)}>
-                            ₹{isCollected ? existingCollection.amount : customer.defaultAmount}
+                          <td className="py-3.5 px-4 text-sm font-bold text-slate-800 cursor-pointer" onClick={() => toggleCollection(customer, currentMonths)}>
+                            ₹{currentAmount}
                           </td>
                           <td className="py-3.5 px-4">
                             <select
                               disabled={isCollected || isProcessing}
-                              value={isCollected ? (existingCollection.installmentMonths || 1) : 1}
-                              onChange={(e) => toggleCollection(customer, parseInt(e.target.value))}
+                              value={currentMonths}
+                              onChange={(e) => updateInstallmentMonths(customer, parseInt(e.target.value))}
                               className="w-full px-2.5 py-1.5 text-xs font-medium border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none disabled:bg-slate-50 disabled:text-slate-400 transition-all bg-white"
                             >
                               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => (
@@ -1125,7 +1246,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                                 onClick={(e) => { 
                                   e.stopPropagation(); 
                                   if (!isCollected) {
-                                    saveSingleCollection(customer, collections.find(c => c.accountNo === customer.accountNo)?.installmentMonths || 1); 
+                                    saveSingleCollection(customer, currentMonths); 
                                   }
                                 }}
                                 disabled={isProcessing || isCollected}
@@ -1161,8 +1282,11 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                 {filteredCustomers.map((customer, index) => {
                   const existingCollection = collections.find(c => c.accountNo === customer.accountNo);
                   const isCollected = !!existingCollection;
-                  const isPending = pendingCollections.some(c => c.accountNo === customer.accountNo);
+                  const pendingCollection = pendingCollections.find(c => c.accountNo === customer.accountNo);
+                  const isPending = !!pendingCollection;
                   const isProcessing = processingAccounts.has(customer.accountNo);
+                  const currentMonths = isCollected ? (existingCollection.installmentMonths || 1) : (pendingCollection?.installmentMonths || 1);
+                  const currentAmount = isCollected ? existingCollection.amount : (isPending ? pendingCollection.amount : customer.defaultAmount);
 
                   return (
                     <div 
@@ -1197,7 +1321,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                         </div>
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-800">
-                            ₹{isCollected ? existingCollection.amount : customer.defaultAmount}
+                            ₹{currentAmount}
                           </span>
                           <button 
                             onClick={() => handleDeleteCustomer(customer.id)}
@@ -1213,8 +1337,8 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                           <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Months:</span>
                           <select
                             disabled={isCollected || isProcessing}
-                            value={isCollected ? (existingCollection.installmentMonths || 1) : 1}
-                            onChange={(e) => toggleCollection(customer, parseInt(e.target.value))}
+                            value={currentMonths}
+                            onChange={(e) => updateInstallmentMonths(customer, parseInt(e.target.value))}
                             className="flex-1 px-2.5 py-1.5 text-xs font-medium border border-slate-200 rounded-lg focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none disabled:bg-slate-100 disabled:text-slate-400 bg-white transition-all"
                           >
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => (
@@ -1225,7 +1349,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                         
                         <button 
                           disabled={isProcessing}
-                          onClick={() => toggleCollection(customer)}
+                          onClick={() => toggleCollection(customer, currentMonths)}
                           className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
                             isProcessing ? 'bg-slate-100 text-slate-400' :
                             isCollected ? 'bg-success/10 text-success border border-success/20' : 
@@ -1306,7 +1430,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                     placeholder="e.g. 500"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider ml-0.5">Mobile Number</label>
                     <input 
@@ -1330,6 +1454,15 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                       <option value="5 Year">5 Year</option>
                       <option value="10 Year">10 Year</option>
                     </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider ml-0.5">Opened On</label>
+                    <input
+                      type="date"
+                      value={newOpenedOn}
+                      onChange={e => setNewOpenedOn(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none bg-white text-slate-900 font-medium transition-all"
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1400,7 +1533,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                       const val = e.target.value;
                       setManualAccountNo(val);
                       // Auto-fill name and amount if account exists
-                      const cust = customers.find(c => c.accountNo === val);
+                      const cust = customers.find(c => c.accountNo.replace(/^="|"$/g, '') === val.replace(/^="|"$/g, ''));
                       if (cust) {
                         setManualAccountName(cust.accountName || '');
                         setManualAmount(cust.defaultAmount.toString());
@@ -1521,7 +1654,7 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                     placeholder="e.g. 500"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider ml-0.5">Mobile Number</label>
                     <input 
@@ -1545,6 +1678,15 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
                       <option value="5 Year">5 Year</option>
                       <option value="10 Year">10 Year</option>
                     </select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-slate-600 uppercase tracking-wider ml-0.5">Opened On</label>
+                    <input
+                      type="date"
+                      value={editOpenedOn}
+                      onChange={e => setEditOpenedOn(e.target.value)}
+                      className="w-full px-4 py-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand/20 focus:border-brand outline-none bg-white text-slate-900 font-medium transition-all"
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -1634,16 +1776,17 @@ export default function CollectionTracker({ user, addToast }: CollectionTrackerP
         addToast={addToast}
         onEditProfile={(customer) => {
           setEditingCustomer(customer);
-          setEditAccountNo(customer.accountNo);
+          setEditAccountNo(customer.accountNo.replace(/^="|"$/g, ''));
           setEditAccountName(customer.accountName);
           setEditAmount(customer.defaultAmount.toString());
           setEditMobileNumber(customer.mobileNumber || '');
           setEditMaturityTime(customer.maturityTime || '5 Year');
+          setEditOpenedOn(customer.openedOn || '');
           setEditTotalDeposit(customer.totalDeposit?.toString() || '');
           setEditCollectionAmount(customer.collectionAmount?.toString() || '');
         }}
         onAddCollection={(customer) => {
-          setManualAccountNo(customer.accountNo);
+          setManualAccountNo(customer.accountNo.replace(/^="|"$/g, ''));
           setManualAccountName(customer.accountName);
           setManualAmount(customer.defaultAmount.toString());
           setManualMonths('1');

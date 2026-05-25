@@ -8,9 +8,10 @@ interface CustomCalendarProps {
   selectedDate: string; // YYYY-MM-DD
   onSelectDate: (date: string) => void;
   highlightedDates: string[]; // Array of YYYY-MM-DD
+  onViewMonthChange?: (month: Date) => void;
 }
 
-export default function CustomCalendar({ selectedDate, onSelectDate, highlightedDates }: CustomCalendarProps) {
+export default function CustomCalendar({ selectedDate, onSelectDate, highlightedDates, onViewMonthChange }: CustomCalendarProps) {
   const parseDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-').map(Number);
     return new Date(year, month - 1, day);
@@ -24,6 +25,7 @@ export default function CustomCalendar({ selectedDate, onSelectDate, highlighted
   };
 
   const [isOpen, setIsOpen] = useState(false);
+  const [displayMonth, setDisplayMonth] = useState<Date>(parseDate(selectedDate));
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close popover when clicking outside
@@ -36,6 +38,11 @@ export default function CustomCalendar({ selectedDate, onSelectDate, highlighted
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Update displayMonth when selectedDate changes from outside
+  useEffect(() => {
+    setDisplayMonth(parseDate(selectedDate));
+  }, [selectedDate]);
 
   const displayDate = parseDate(selectedDate).toLocaleDateString('en-US', {
     weekday: 'short',
@@ -135,24 +142,87 @@ export default function CustomCalendar({ selectedDate, onSelectDate, highlighted
                 background-color: #dc2626;
                 border-radius: 50%;
               }
+              
+              /* Fix for DayPicker Dropdowns */
+              .rdp-dropdown {
+                position: relative !important;
+                opacity: 1 !important;
+                appearance: auto !important;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                padding: 4px 20px 4px 8px;
+                font-size: 0.875rem;
+                font-weight: 600;
+                color: #0f172a;
+                background-color: white;
+                cursor: pointer;
+                margin: 0 4px;
+                height: 32px;
+                pointer-events: auto !important;
+                z-index: 10;
+                min-width: max-content;
+              }
+              .rdp-dropdown:hover {
+                border-color: #dc2626;
+              }
+              .rdp-dropdown:focus {
+                outline: none;
+                border-color: #dc2626;
+                box-shadow: 0 0 0 1px #dc2626;
+              }
+              .rdp-caption_label {
+                display: none !important;
+              }
+              .rdp-dropdown_root {
+                display: flex !important;
+                align-items: center;
+                pointer-events: auto !important;
+              }
+              .rdp-dropdowns {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                margin-bottom: 12px;
+                justify-content: center;
+                pointer-events: auto !important;
+              }
+              .rdp-month_caption {
+                justify-content: center;
+                pointer-events: auto !important;
+              }
+              .rdp-dropdown_icon {
+                display: none !important;
+              }
+              .rdp-chevron {
+                display: none !important; 
+              }
+              /* EXCEPT ensure nav buttons still have a chevron */
+              .rdp-nav .rdp-chevron {
+                display: inline-block !important;
+              }
             `}</style>
             <DayPicker
               mode="single"
               selected={parseDate(selectedDate)}
+              month={displayMonth}
+              onMonthChange={(date) => {
+                setDisplayMonth(date);
+                if (onViewMonthChange) onViewMonthChange(date);
+              }}
               onSelect={(date) => {
                 if (date) {
                   onSelectDate(formatDate(date));
                   setIsOpen(false);
                 }
               }}
+              captionLayout="dropdown"
+              startMonth={new Date(2020, 0)}
+              endMonth={new Date(2035, 11)}
               modifiers={{
                 highlighted: highlightedDatesObjects
               }}
               modifiersClassNames={{
                 highlighted: 'rdp-day_highlighted'
-              }}
-              onMonthChange={(month) => {
-                onSelectDate(formatDate(new Date(month.getFullYear(), month.getMonth(), 1)));
               }}
             />
           </motion.div>

@@ -1246,8 +1246,8 @@ CRITICAL INSTRUCTIONS:
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-3">
-                        <div className="flex gap-3">
+                      <div className="flex gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 hide-scrollbar">
+                        <div className="flex gap-3 shrink-0">
                           <button
                               onClick={downloadAsCSV}
                               className="flex items-center gap-3 px-6 py-4 bg-white border-2 border-slate-100 text-slate-700 rounded-2xl font-black hover:bg-slate-50 transition-all shadow-sm hover-lift uppercase tracking-widest text-[10px]"
@@ -1350,95 +1350,97 @@ CRITICAL INSTRUCTIONS:
                         </div>
                       </div>
                       
-                      <div className="flex gap-3">
-                        <button
-                          onClick={downloadTextResult}
-                          className="flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-[10px]"
-                        >
-                          <FileDown className="w-4 h-4" />
-                          Download .txt
-                        </button>
-                        <button
-                          onClick={downloadXlsxResult}
-                          className="flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-[10px]"
-                        >
-                          <FileCode2 className="w-4 h-4" />
-                          Download .xlsx
-                        </button>
-                        <button
-                          onClick={copyTextResult}
-                          className="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 text-slate-800 rounded-2xl font-black hover:bg-slate-50 transition-all uppercase tracking-widest text-[10px]"
-                        >
-                          <Copy className="w-4 h-4" />
-                          Copy Text
-                        </button>
-                        {conversionType === 'ai-lot-grouping' && (
+                      <div className="flex gap-3 w-full sm:w-auto overflow-x-auto pb-2 sm:pb-0 hide-scrollbar">
+                        <div className="flex gap-3 shrink-0">
                           <button
-                            onClick={async () => {
-                              if (!textResult) return;
-                              setProcessing(true);
-                              try {
-                                const { auth, db } = await import('../firebase');
-                                const { writeBatch, doc, collection, serverTimestamp } = await import('firebase/firestore');
-                                if (!auth.currentUser) throw new Error("Not logged in");
+                            onClick={downloadTextResult}
+                            className="flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-[10px]"
+                          >
+                            <FileDown className="w-4 h-4" />
+                            Download .txt
+                          </button>
+                          <button
+                            onClick={downloadXlsxResult}
+                            className="flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl font-black transition-all uppercase tracking-widest text-[10px]"
+                          >
+                            <FileCode2 className="w-4 h-4" />
+                            Download .xlsx
+                          </button>
+                          <button
+                            onClick={copyTextResult}
+                            className="flex items-center gap-3 px-4 py-3 bg-white border border-slate-200 text-slate-800 rounded-2xl font-black hover:bg-slate-50 transition-all uppercase tracking-widest text-[10px]"
+                          >
+                            <Copy className="w-4 h-4" />
+                            Copy Text
+                          </button>
+                          {conversionType === 'ai-lot-grouping' && (
+                            <button
+                              onClick={async () => {
+                                if (!textResult) return;
+                                setProcessing(true);
+                                try {
+                                  const { auth, db } = await import('../firebase');
+                                  const { writeBatch, doc, collection, serverTimestamp } = await import('firebase/firestore');
+                                  if (!auth.currentUser) throw new Error("Not logged in");
 
-                                const lines = textResult.split('\n').filter((l: string) => l.trim() !== '');
-                                const parsedBlocks = [];
-                                let currentGroup = 1;
+                                  const lines = textResult.split('\n').filter((l: string) => l.trim() !== '');
+                                  const parsedBlocks = [];
+                                  let currentGroup = 1;
 
-                                for (let line of lines) {
-                                  const match = line.match(/^(\d+)\.\s*(.*)/);
-                                  if (match) {
-                                    parsedBlocks.push({ groupNumber: parseInt(match[1]), text: match[2] });
-                                    currentGroup = parseInt(match[1]) + 1;
-                                  } else {
-                                     parsedBlocks.push({ groupNumber: currentGroup, text: line.trim() });
-                                     currentGroup++;
+                                  for (let line of lines) {
+                                    const match = line.match(/^(\d+)\.\s*(.*)/);
+                                    if (match) {
+                                      parsedBlocks.push({ groupNumber: parseInt(match[1]), text: match[2] });
+                                      currentGroup = parseInt(match[1]) + 1;
+                                    } else {
+                                       parsedBlocks.push({ groupNumber: currentGroup, text: line.trim() });
+                                       currentGroup++;
+                                    }
                                   }
-                                }
 
-                                if (parsedBlocks.length === 0) {
-                                  throw new Error("Could not parse lots");
-                                }
+                                  if (parsedBlocks.length === 0) {
+                                    throw new Error("Could not parse lots");
+                                  }
 
-                                const batch = writeBatch(db);
-                                const checklistRef = doc(collection(db, 'checklists'));
-                                const checklistId = checklistRef.id;
+                                  const batch = writeBatch(db);
+                                  const checklistRef = doc(collection(db, 'checklists'));
+                                  const checklistId = checklistRef.id;
 
-                                batch.set(checklistRef, {
-                                  userId: auth.currentUser.uid,
-                                  title: `AI Lot Grouping ${new Date().toLocaleDateString()}`,
-                                  createdAt: serverTimestamp(),
-                                  updatedAt: serverTimestamp()
-                                });
-
-                                for (let block of parsedBlocks) {
-                                  const blockRef = doc(collection(db, 'task_blocks'));
-                                  batch.set(blockRef, {
+                                  batch.set(checklistRef, {
                                     userId: auth.currentUser.uid,
-                                    checklistId,
-                                    groupNumber: block.groupNumber,
-                                    accountsText: block.text,
-                                    isCompleted: false,
+                                    title: `AI Lot Grouping ${new Date().toLocaleDateString()}`,
                                     createdAt: serverTimestamp(),
                                     updatedAt: serverTimestamp()
                                   });
-                                }
 
-                                await batch.commit();
-                                setSuccess("Successfully created CheckList from Lots!");
-                              } catch (err: any) {
-                                setError(err.message || 'Failed to create CheckList');
-                              } finally {
-                                setProcessing(false);
-                              }
-                            }}
-                            className="flex items-center gap-3 px-6 py-3 bg-brand text-white rounded-2xl font-black hover:bg-brand/90 transition-all uppercase tracking-widest text-[10px] shadow-lg hover:shadow-brand/20 shadow-brand/10"
-                          >
-                            <ListChecks className="w-4 h-4" />
-                            Send to CheckLists
-                          </button>
-                        )}
+                                  for (let block of parsedBlocks) {
+                                    const blockRef = doc(collection(db, 'task_blocks'));
+                                    batch.set(blockRef, {
+                                      userId: auth.currentUser.uid,
+                                      checklistId,
+                                      groupNumber: block.groupNumber,
+                                      accountsText: block.text,
+                                      isCompleted: false,
+                                      createdAt: serverTimestamp(),
+                                      updatedAt: serverTimestamp()
+                                    });
+                                  }
+
+                                  await batch.commit();
+                                  setSuccess("Successfully created CheckList from Lots!");
+                                } catch (err: any) {
+                                  setError(err.message || 'Failed to create CheckList');
+                                } finally {
+                                  setProcessing(false);
+                                }
+                              }}
+                              className="flex items-center gap-3 px-6 py-3 bg-brand text-white rounded-2xl font-black hover:bg-brand/90 transition-all uppercase tracking-widest text-[10px] shadow-lg hover:shadow-brand/20 shadow-brand/10"
+                            >
+                              <ListChecks className="w-4 h-4" />
+                              Send to CheckLists
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="p-8 bg-slate-50 font-mono text-sm leading-relaxed whitespace-pre-wrap text-slate-800">
